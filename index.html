@@ -725,6 +725,7 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
   .drawerbk{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:65}
   body.drawer{overflow:hidden}
 }
+.shbox{border:1px dashed var(--line);border-radius:12px;padding:8px 12px;margin:0 0 10px} .shbox .bar input{flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -735,7 +736,7 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 <input type="file" id="irIn" accept=".html,.htm,.txt,text/html,text/plain" hidden>
 <script>
 /* ==== CONFIGURAÇÃO — cole aqui o Client ID do Google Cloud (opcional; também dá para colar em Ajustes) ==== */
-var CELEBRAR_CONFIG={ googleClientId: "1015624555896-8t053n2h6om4nq4u2rsfac9827pslqpl.apps.googleusercontent.com" };
+var CELEBRAR_CONFIG={ googleClientId: "1015624555896-8t053n2h6om4nq4u2rsfac9827pslqpl.apps.googleusercontent.com", googleApiKey: "AIzaSyDTGTa8burCfXOi3AHMaLKLF8BtkZTECF0" };
 </script>
 <script>
 /* ===== Teoria / cifras ===== */
@@ -4150,7 +4151,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='33 · 24/10/2026';
+var APP_VERSION='35 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4257,6 +4258,53 @@ try{ render(); }catch(e){}
 window.addEventListener('click',e=>{ if(!S.drawer) return; const el=e.target.closest('.side [data-act]'); if(el) S.drawer=false; },true);
 window.addEventListener('resize',()=>{ if(S.drawer&&window.innerWidth>=900){ S.drawer=false; render(); } });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&S.drawer){ S.drawer=false; render(); } });
+try{ render(); }catch(e){}
+
+/* ===================== Usar os dados de outra conta (arquivo compartilhado no Drive) ===================== */
+/* Com o escopo drive.file, o app só enxerga um arquivo de outra conta depois que você o escolhe no seletor do Google (Picker). */
+var GAPP_ID='1015624555896';
+function gApiKey(){ return (db.prefs.gApiKey||(window.CELEBRAR_CONFIG&&CELEBRAR_CONFIG.googleApiKey)||'').trim(); }
+async function gdFind(){
+  if(GD.fileId) return GD.fileId;
+  if(db.prefs.gdFileId) return (GD.fileId=db.prefs.gdFileId);
+  const q=encodeURIComponent(`name='${GD_FILE}' and trashed=false`);
+  const r=await (await gdFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,modifiedTime,parents)&orderBy=modifiedTime desc&spaces=drive`)).json();
+  if(r.files&&r.files[0]){ GD.fileId=r.files[0].id; return GD.fileId; } return null;
+}
+function loadGapi(){ return new Promise((ok,err)=>{ if(window.gapi&&gapi.load) return gapi.load('picker',{callback:ok,onerror:err});
+  const s=document.createElement('script'); s.src='https://apis.google.com/js/api.js'; s.onload=()=>gapi.load('picker',{callback:ok,onerror:err}); s.onerror=()=>err(new Error('Sem internet para abrir o seletor do Google')); document.head.appendChild(s); }); }
+async function pickShared(){
+  if(!gApiKey()){ toast('Falta a chave de API do Google (Ajustes → Google Drive)'); return; }
+  try{
+    const token=await gdAuth(true); await loadGapi();
+    const view=new google.picker.DocsView(google.picker.ViewId.DOCS).setQuery('celebrar-dados').setMimeTypes('application/json,text/plain').setIncludeFolders(false);
+    const shared=new google.picker.DocsView(google.picker.ViewId.DOCS).setOwnedByMe(false).setMimeTypes('application/json,text/plain');
+    new google.picker.PickerBuilder().setAppId(GAPP_ID).setOAuthToken(token).setDeveloperKey(gApiKey()).setLocale('pt-BR')
+      .setTitle('Escolha o arquivo celebrar-dados.json da conta que guarda o Celebrar').addView(view).addView(shared)
+      .setCallback(async d=>{ if(d.action!==google.picker.Action.PICKED) return; const doc=d.docs&&d.docs[0]; if(!doc) return;
+        if(!/celebrar/i.test(doc.name||'')&&!confirm(`O arquivo escolhido é “${doc.name}”. Usar mesmo assim?`)) return;
+        db.prefs.gdFileId=doc.id; db.prefs.gdFileName=doc.name; db.prefs.gdShared=true; GD.fileId=doc.id; save0();
+        toast('Arquivo compartilhado escolhido — sincronizando…'); await gdSync(false); })
+      .build().setVisible(true);
+  }catch(e){ toast(e.message||'Não consegui abrir o seletor'); }
+}
+function sharePanel(){
+  const k=gApiKey(); const on=!!db.prefs.gdFileId;
+  return `<div class="shbox"><b>Usar os dados de outra conta</b>
+    <div class="hint" style="margin:4px 0">${on?`Usando o arquivo <b>${esc(db.prefs.gdFileName||'celebrar-dados.json')}</b> escolhido por você (pode ser de outra conta que compartilhou com esta).`:'Para entrar com o seu Gmail e ver os dados guardados na conta dos acordes: compartilhe a pasta <b>Celebrar</b> da conta dos acordes com o seu Gmail (como Editor) e escolha o arquivo aqui.'}</div>
+    ${k?`<div class="bar" style="margin:4px 0"><button data-act="shPick">📂 ${on?'Escolher outro arquivo':'Escolher arquivo compartilhado'}</button>${on?'<button class="ghost" data-act="shClear">Voltar para o arquivo desta conta</button>':''}</div>`:''}
+    <details ${k?'':'open'}><summary class="hint">Chave de API do Google ${k?'(configurada)':'(necessária para o seletor)'}</summary><div class="bar"><input id="gkey" value="${esc(db.prefs.gApiKey||'')}" placeholder="${esc((window.CELEBRAR_CONFIG&&CELEBRAR_CONFIG.googleApiKey)?'configurada no app':'AIza…')}"><button data-act="shKey">Salvar</button></div></details></div>`;
+}
+(function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu'&&db.prefs.gdLinked) h=h.replace('<label class="lbl">Imagem de fundo',sharePanel()+'<label class="lbl">Imagem de fundo'); return h; }; })();
+(function(){ const _st=gdStatusText; gdStatusText=function(){ const t=_st(); return db.prefs.gdFileId&&db.prefs.gdLinked?t+' · arquivo compartilhado':t; }; })();
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
+  const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
+  if(a==='shPick'){ stop(); pickShared(); }
+  if(a==='shClear'){ stop(); delete db.prefs.gdFileId; delete db.prefs.gdFileName; db.prefs.gdShared=false; GD.fileId=null; save0(); render(); toast('Voltou a usar o arquivo desta conta'); }
+  if(a==='shKey'){ stop(); db.prefs.gApiKey=(document.getElementById('gkey').value||'').trim(); save0(); render(); toast(db.prefs.gApiKey?'Chave salva':'Chave removida'); }
+},true);
+/* ao trocar de conta ou sair, esquece o arquivo escolhido (ele pertence à sessão daquela conta) */
+window.addEventListener("click",e=>{ const el=e.target.closest('[data-act="acctSwitch"],[data-act="logout"]'); if(el){ delete db.prefs.gdFileId; delete db.prefs.gdFileName; GD.fileId=null; } },true);
 try{ render(); }catch(e){}
 
 </script>
