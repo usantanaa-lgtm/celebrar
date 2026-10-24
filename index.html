@@ -728,6 +728,16 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .shbox{border:1px dashed var(--line);border-radius:12px;padding:8px 12px;margin:0 0 10px} .shbox .bar input{flex:1;min-width:0}
 .backlab{display:inline-flex;align-items:center;gap:4px;width:auto!important;padding:0 10px!important;white-space:nowrap} .backlab small{font-size:13px;max-width:180px;overflow:hidden;text-overflow:ellipsis}
 .addrep{border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:999px;padding:4px 12px;min-height:34px;font-weight:600;font-size:13.5px;white-space:nowrap} .addmini{color:var(--accent);font-size:20px} .srow.on{border-color:var(--accent);background:var(--accent-soft)}
+@media (max-width:640px){
+  .scard2{flex-wrap:wrap;row-gap:6px}
+  .scard2 .back{order:-2}
+  .scard2 .hacts{order:-1;flex:1;justify-content:flex-end}
+  .scard2 .ttl{flex:1 1 0;min-width:0}
+  .scard2 h1{font-size:21px;line-height:1.2}
+  .backlab small{max-width:110px}
+  .addrep{padding:3px 10px;font-size:13px}
+}
+@media (max-width:899px){ .dual{display:flex!important;flex-direction:column;gap:12px} .dual>.sheet{width:100%!important} }
 </style>
 </head>
 <body>
@@ -2724,7 +2734,7 @@ function songPanel(){
   const {s,ev,f}=c; const key0=c.key; touchSong(s); const MD=instMode(); const VK=viewKey(key0,s); const key=VK.key;
   const fl=ev?flatItems(ev):[]; const U=usage()[s.id]||[];
   let tabs=[['cifra','Cifra'],['arranjo','Grade'],['baixo','Baixo'],['letra','Letra'],['ficha','Ficha']];
-  if(s.grid&&s.cifra&&wide()) tabs.splice(1,0,['ambos','Lado a lado']);
+  if(s.grid&&s.cifra) tabs.splice(1,0,['ambos',wide()?'Lado a lado':'Ambos']);
   tabs=MD.tabs?MD.tabs.map(m=>tabs.find(t=>t[0]===m)).filter(Boolean):tabs;
   let mode=S.songMode; if(mode==='grade') mode='arranjo'; if(!tabs.some(t=>t[0]===mode)) mode=modeDefTab(MD,s);
   const inPane=(S.view==='lib'||S.view==='event')&&wide();
@@ -2759,7 +2769,7 @@ function songPanel(){
       <span class="sizes"><button data-act="fontSet" data-v="15" class="${db.prefs.font<=15?'on':''}" style="font-size:13px">A</button><button data-act="fontSet" data-v="18" class="${db.prefs.font>15&&db.prefs.font<=20?'on':''}" style="font-size:16px">A</button><button data-act="fontSet" data-v="23" class="${db.prefs.font>20?'on':''}" style="font-size:20px">A</button></span>
       <span class="sp"></span>
       ${s.grid&&!s.cifra?`<button data-act="goImport" data-for="${s.id}">＋ Cifra</button>`:''}
-      <button data-act="openCifra" title="Abrir no Cifra Club">↗</button><button data-act="stage" title="Modo Palco">▭</button>
+      ${s.link?`<button data-act="openCifra" title="Abrir no Cifra Club">Cifra Club ↗</button>`:''}<button data-act="stage" title="Modo Palco">▭</button>
     </div>
     ${modeNote(MD,VK,key0,s)}
     <div class="keynote">${ev?'Tom deste evento':'Tom'}: <b>${esc(key0||'?')}</b>${s.key&&key0&&s.key!==key0?` · original ${esc(s.key)}`:''}${MD.arr?` · ${arrBar(s)}`:''}${MD.inv?` · ${invBar(sections(s.cifra&&mode==='cifra'?s.cifra:(s.grid||s.cifra)))}`:''}</div>
@@ -4153,7 +4163,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='39 · 24/10/2026';
+var APP_VERSION='40 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4221,7 +4231,7 @@ async function gdUpload(){ const d=await gdDownload(); const r=mergeRemote(d); a
 async function gdSync(interactive){
   if(SYNC.busy) return; SYNC.busy=true; syncBar('sincronizando'); let res=null;
   try{ await gdAuth(interactive!==false); markChanges(); res=await gdUpload(); db.prefs.gdLinked=true; save0();
-    const n=res.added+res.updated+res.removed; toast(n?`Sincronizado: ${res.added?res.added+' novo(s) ':''}${res.updated?res.updated+' atualizado(s) ':''}${res.removed?res.removed+' removido(s)':''}`.trim():'Tudo sincronizado com o Drive');
+    const n=res.added+res.updated+res.removed; if(n||interactive!==false) toast(n?`Sincronizado: ${res.added?res.added+' novo(s) ':''}${res.updated?res.updated+' atualizado(s) ':''}${res.removed?res.removed+' removido(s)':''}`.trim():'Tudo sincronizado com o Drive');
   }catch(e){ toast(e.message||'Não consegui sincronizar'); }
   SYNC.busy=false; render(); return res;
 }
@@ -4236,8 +4246,8 @@ function gdApply(d){ const r=mergeRemote(d); render(); toast(`Do Drive: ${r.adde
 function syncBarHtml(state){
   if(!db.prefs.gdLinked||!gdClientId()||SYNC.hide) return '';
   if(state==='sincronizando') return `<div class="syncbar busy">☁ Sincronizando…</div>`;
-  if(gdOnline()) return '';
-  return `<div class="syncbar ${isDirty()?'warn':''}"><span>☁ ${isDirty()?'Há mudanças só neste aparelho.':'Toque para pegar as novidades do Drive.'}</span><button data-act="syncNow">↻ Sincronizar</button><button class="ghost" data-act="syncHide" aria-label="Fechar">✕</button></div>`;
+  if(gdOnline()||!isDirty()) return '';
+  return `<div class="syncbar ${isDirty()?'warn':''}"><span>☁ Há mudanças só neste aparelho.</span><button data-act="syncNow">↻ Sincronizar</button><button class="ghost" data-act="syncHide" aria-label="Fechar">✕</button></div>`;
 }
 function syncBar(state){ const el=document.getElementById('syncbar'); if(el) el.innerHTML=syncBarHtml(state); }
 (function(){ const _r=render; render=function(){ _r(); let d=document.getElementById('syncbar'); if(!d){ d=document.createElement('div'); d.id='syncbar'; document.body.appendChild(d); }
