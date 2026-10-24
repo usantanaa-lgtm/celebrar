@@ -4168,7 +4168,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='43 · 24/10/2026';
+var APP_VERSION='44 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4439,6 +4439,9 @@ function fixCifraKey(s){
 document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return;
   if(el.dataset.act==='ckUse'){ e.stopImmediatePropagation(); e.preventDefault(); S.modal.s.cifraKey=el.dataset.k; render(); }
   if(el.dataset.act==='saveSong'&&S.modal&&S.modal.s&&S.modal.s.gridSource==='cifra'&&S.modal.s.cifraKey) S.modal.s.gridKey=S.modal.s.cifraKey; },true);
+/* reaplica depois de sincronizar (outro aparelho com versão antiga pode ter mandado o tom errado) e ao abrir a música */
+(function(){ const _mr=mergeRemote; mergeRemote=function(d){ const r=_mr(d); let ch=false; (db.songs||[]).forEach(s=>{ if(fixCifraKey(s)) ch=true; }); if(ch) save(); return r; }; })();
+(function(){ const _sp=songPanel; songPanel=function(){ const c=songCtx(); if(c&&fixCifraKey(c.s)) save(); return _sp(); }; })();
 try{ render(); }catch(e){}
 
 /* ===================== Botão de nuvem no topo: sincronizar com um toque ===================== */
