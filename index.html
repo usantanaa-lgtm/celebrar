@@ -2723,7 +2723,7 @@ function songPanel(){
   const c=songCtx(); if(!c) return `<div class="empty">Música não encontrada.</div>`;
   const {s,ev,f}=c; const key0=c.key; touchSong(s); const MD=instMode(); const VK=viewKey(key0,s); const key=VK.key;
   const fl=ev?flatItems(ev):[]; const U=usage()[s.id]||[];
-  let tabs=[['cifra','Cifra'],['arranjo','Arranjo'],['baixo','Baixo'],['letra','Letra'],['ficha','Ficha']];
+  let tabs=[['cifra','Cifra'],['arranjo','Grade'],['baixo','Baixo'],['letra','Letra'],['ficha','Ficha']];
   if(s.grid&&s.cifra&&wide()) tabs.splice(1,0,['ambos','Lado a lado']);
   tabs=MD.tabs?MD.tabs.map(m=>tabs.find(t=>t[0]===m)).filter(Boolean):tabs;
   let mode=S.songMode; if(mode==='grade') mode='arranjo'; if(!tabs.some(t=>t[0]===mode)) mode=modeDefTab(MD,s);
@@ -2745,7 +2745,7 @@ function songPanel(){
       ${(inPane)?'':`<button class="ghost back" data-act="songBack" aria-label="Voltar">‹</button>`}
       ${tileHtml(s,true)}
       <div class="ttl">${f?`<div class="kick">${esc(f.b.name)} · ${esc(ev.name)}</div>`:''}<h1>${esc(s.title)}</h1><div class="meta">${esc(s.artist||'')}</div>
-        <div class="tgs">${s.cifra?'<span class="tg t-c">Cifra</span>':''}${hasArr(s)?'<span class="tg t-a">♬ Arranjo</span>':''}${s.grid?'<span class="tg t-b">◉ Baixo</span>':''}${s.fav?'<span class="tg t-f">★ Favorita</span>':''}</div></div>
+        <div class="tgs">${s.cifra?'<span class="tg t-c">Cifra</span>':''}${hasArr(s)?'<span class="tg t-a">♬ Arranjo</span>':''}${s.grid?'<span class="tg t-g">▦ Grade</span>':''}${s.fav?'<span class="tg t-f">★ Favorita</span>':''}</div></div>
       <div class="hacts"><button class="star big ${s.fav?'on':''}" data-act="fav" data-id="${s.id}" title="Favorita">${s.fav?'♥':'♡'}</button>
         ${inPane&&S.view==='lib'?`<button class="ghost ib" data-act="openSong" data-id="${s.id}" title="Expandir música">⤢</button>`:''}
         ${ev&&wide()?`<button class="ghost ib ${S.focus?'on':''}" data-act="focus" title="${S.focus?'Mostrar lista':'Esconder lista'}">${S.focus?'⤡':'⤢'}</button>`:''}
@@ -4153,7 +4153,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='38 · 24/10/2026';
+var APP_VERSION='39 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
