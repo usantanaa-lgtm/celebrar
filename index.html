@@ -738,6 +738,9 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
   .addrep{padding:3px 10px;font-size:13px}
 }
 @media (max-width:899px){ .dual{display:flex!important;flex-direction:column;gap:12px} .dual>.sheet{width:100%!important} }
+.cloud{position:relative} .cloud i{position:absolute;right:7px;bottom:7px;width:9px;height:9px;border-radius:50%;border:2px solid #8c1d2c} .c-ok i{background:#4caf6a} .c-dirty i{background:#f0b429} .c-old i{background:#c9c9c9} .c-busy i{display:none} .c-busy{animation:spin 1s linear infinite} @keyframes spin{to{transform:rotate(360deg)}}
+.sheets .sheetbox{border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:10px 0;overflow:hidden} .sbh{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap} .sbh small{color:var(--muted)} .sheetview{background:#fff;padding:6px} .sheetview img,.sheetview canvas{display:block;width:100%;height:auto;margin:0 auto 6px}
+.scard2 .tgs{flex-wrap:wrap} .scard2 .ttl{min-width:0;overflow:hidden}
 </style>
 </head>
 <body>
@@ -2736,12 +2739,14 @@ function songPanel(){
   let tabs=[['cifra','Cifra'],['arranjo','Grade'],['baixo','Baixo'],['letra','Letra'],['ficha','Ficha']];
   if(s.grid&&s.cifra) tabs.splice(1,0,['ambos',wide()?'Lado a lado':'Ambos']);
   tabs=MD.tabs?MD.tabs.map(m=>tabs.find(t=>t[0]===m)).filter(Boolean):tabs;
+  tabs.splice(Math.max(0,tabs.length-1),0,['partitura','Partitura'+(songSheets(s).length?' ('+songSheets(s).length+')':'')]);
   let mode=S.songMode; if(mode==='grade') mode='arranjo'; if(!tabs.some(t=>t[0]===mode)) mode=modeDefTab(MD,s);
   const inPane=(S.view==='lib'||S.view==='event')&&wide();
   const big=S.view==='song'&&window.innerWidth>=1200;
   const content=(()=>{
     if(mode==='letra') return s.cifra?`<div class="bar end">${MD.id==='voz'?`<span class="keynote" style="margin:0 auto 0 0">${ev?'Tom deste evento':'Tom'}: <b style="font-size:20px">${esc(key0||'?')}</b>${s.key&&key0!==s.key?` · original ${esc(s.key)}`:''}</span>`:''}<button data-act="copyLyrics">Copiar letra</button></div><article class="liturgic letra" style="--fs:${db.prefs.font+(MD.id==='voz'?5:1)}px">${esc(lyricsOf(s).replace(/[ \t]{2,}/g,' '))}</article>`:noCifra(s,key);
     if(mode==='ficha') return fichaHtml(s);
+    if(mode==='partitura') return sheetsHtml(s);
     if(mode==='baixo') return s.grid?`<div class="sheet" style="--fs:${db.prefs.font}px">${gridHtml(s,key,'baixo')}</div>`:noCifra(s,key);
     if(mode==='ambos') return `<div class="dual"><div class="sheet" style="--fs:${Math.max(12,db.prefs.font-3)}px">${gridHtml(s,key)}</div><div class="sheet cifra" style="--fs:${db.prefs.font}px">${cifraHtml(s,key)}</div></div>`;
     if(mode==='arranjo') return s.grid?`<div class="sheet" style="--fs:${db.prefs.font}px">${gridHtml(s,key)}</div>`:s.cifra?`<div class="sheet cifra" style="--fs:${db.prefs.font}px">${cifraHtml(s,key)}</div>`:noCifra(s,key);
@@ -4163,7 +4168,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='41 · 24/10/2026';
+var APP_VERSION='43 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4434,6 +4439,63 @@ function fixCifraKey(s){
 document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return;
   if(el.dataset.act==='ckUse'){ e.stopImmediatePropagation(); e.preventDefault(); S.modal.s.cifraKey=el.dataset.k; render(); }
   if(el.dataset.act==='saveSong'&&S.modal&&S.modal.s&&S.modal.s.gridSource==='cifra'&&S.modal.s.cifraKey) S.modal.s.gridKey=S.modal.s.cifraKey; },true);
+try{ render(); }catch(e){}
+
+/* ===================== Botão de nuvem no topo: sincronizar com um toque ===================== */
+function cloudBtn(){
+  if(!db.prefs.gdLinked||!gdClientId()) return '';
+  const st=SYNC.busy?'busy':isDirty()?'dirty':gdOnline()?'ok':'old';
+  const tip={busy:'Sincronizando…',dirty:'Há mudanças só neste aparelho — toque para enviar e receber',ok:'Sincronizado com o Drive — toque para buscar novidades',old:'Toque para sincronizar com o Drive (buscar o que você fez nos outros aparelhos)'}[st];
+  const last=db.prefs.gdLast?new Date(db.prefs.gdLast).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+  return `<button class="bico cloud c-${st}" data-act="cloudSync" title="${esc(tip)}${last?' · última: '+last:''}" aria-label="Sincronizar">${st==='busy'?'⟳':'☁'}<i></i></button>`;
+}
+(function(){ const _t=topbar; topbar=function(){ return _t().replace('<span class="bicons">','<span class="bicons">'+cloudBtn()); }; })();
+(function(){ const _sb=syncBar; syncBar=function(st){ _sb(st); const b=document.querySelector('.bicons .cloud'); if(b) b.outerHTML=cloudBtn(); }; })();
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act="cloudSync"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault(); gdSync(true); },true);
+try{ render(); }catch(e){}
+
+/* ===================== Partitura da música (PDF ou imagem) ===================== */
+function songSheets(s){ return (db.library||[]).filter(x=>x.songId===(s&&s.id)); }
+function sheetsHtml(s){
+  const list=songSheets(s);
+  return `<div class="sheets"><div class="bar"><button class="pri" data-act="sheetAdd" data-id="${s.id}">＋ Adicionar partitura</button><span class="hint" style="margin:0">PDF ou foto (pode ser mais de uma página/arquivo)</span></div>
+    ${list.length?list.map(x=>`<section class="sheetbox"><div class="sbh"><b>${esc(x.name)}</b><small>${x.type==='pdf'?'PDF':'Imagem'}${x.pages?' · '+x.pages+' pág.':''}</small><span class="sp"></span>
+      <button class="mini" data-act="sheetFull" data-id="${x.id}">⤢ Tela cheia</button><button class="mini danger" data-act="sheetDel" data-id="${x.id}">✕</button></div>
+      <div class="sheetview" data-sheet="${x.id}">${LIBLOCAL.has(x.id)?'<div class="hint">Abrindo…</div>':(x.driveId?`<div class="nogrid"><p>Está no seu Drive.</p><button data-act="libFetch" data-id="${x.id}">⬇ Baixar para este aparelho</button></div>`:'<div class="hint">Arquivo não está neste aparelho.</div>')}</div></section>`).join('')
+      :'<div class="empty">Nenhuma partitura ainda. Toque em <b>＋ Adicionar partitura</b> e escolha o PDF ou a foto.</div>'}
+    <div class="hint">A partitura não muda de tom junto com a cifra (é uma imagem). Ela também aparece na Biblioteca, em “Partituras”, e vai para o seu Drive.</div></div>`;
+}
+async function hydrateSheets(){
+  for(const el of document.querySelectorAll('[data-sheet]')){ if(el.dataset.done) continue; el.dataset.done='1'; const x=libItem(el.dataset.sheet); if(!x||!LIBLOCAL.has(x.id)) continue;
+    let blob; try{ blob=await fget(x.id); }catch(e){} if(!blob){ el.innerHTML='<div class="hint">Não consegui abrir.</div>'; continue; }
+    const url=URL.createObjectURL(blob);
+    if(x.type==='img'){ el.innerHTML=`<img src="${url}" alt="${esc(x.name)}">`; continue; }
+    if(x.type!=='pdf'){ el.innerHTML='<div class="hint">Tipo de arquivo sem visualização.</div>'; continue; }
+    try{ const pdfjs=await (window._pdfjs||(window._pdfjs=import('./pdfjs/pdf.min.mjs'))); pdfjs.GlobalWorkerOptions.workerSrc='./pdfjs/pdf.worker.min.mjs';
+      const pdf=await pdfjs.getDocument({data:new Uint8Array(await blob.arrayBuffer()),standardFontDataUrl:'./pdfjs/standard_fonts/'}).promise; if(x.pages!==pdf.numPages){ x.pages=pdf.numPages; save0(); }
+      el.innerHTML=''; const W=Math.min(el.clientWidth||800,1100); const dpr=Math.min(window.devicePixelRatio||1,2);
+      for(let i=1;i<=Math.min(pdf.numPages,12);i++){ const pg=await pdf.getPage(i); const v1=pg.getViewport({scale:1}); const vp=pg.getViewport({scale:W/v1.width*dpr}); const c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height; c.style.width='100%'; el.appendChild(c); await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise; }
+    }catch(e){ el.innerHTML=`<div class="nogrid"><p>Não consegui mostrar o PDF aqui${location.protocol==='file:'?' (abra pelo endereço do GitHub)':''}.</p><button data-act="sheetFull" data-id="${x.id}">Abrir</button></div>`; }
+  }
+}
+(function(){ const _r=render; render=function(){ _r(); if(document.querySelector('[data-sheet]')) hydrateSheets(); }; })();
+(function(){ const inp=document.createElement('input'); inp.type='file'; inp.id='sheetIn'; inp.multiple=true; inp.hidden=true; inp.accept='application/pdf,.pdf,image/*'; document.body.appendChild(inp);
+  inp.addEventListener('change',async()=>{ const files=[...inp.files]; inp.value=''; const s=songById(S.sheetFor); if(!files.length||!s) return;
+    try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+    const cats=libCats(); if(!cats.includes('Partituras')){ db.prefs.libCats=[...cats,'Partituras']; }
+    let n=0; for(const f of files){ const id=uid(); const x={id,name:s.title+(files.length>1||songSheets(s).length?' — '+f.name.replace(/\.[^.]+$/,''):''),fname:f.name,cat:'Partituras',type:libType(f.name,f.type),size:f.size,added:Date.now(),songId:s.id};
+      try{ await fput(id,f); db.library.push(x); n++; }catch(e){ toast('Sem espaço no aparelho para “'+f.name+'”'); } }
+    save(); S.songMode='partitura'; rerender(); toast(n+' partitura(s) adicionada(s)');
+    if(db.prefs.gdLinked&&gdOnline()) for(const x of db.library.slice(-n)) libUpload(x).catch(()=>{});
+  }); })();
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act; const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
+  if(a==='sheetAdd'){ stop(); S.sheetFor=el.dataset.id; document.getElementById('sheetIn').click(); return; }
+  if(a==='sheetDel'){ stop(); const x=libItem(el.dataset.id); if(!x||!confirm('Remover a partitura “'+x.name+'”?')) return; fdel(x.id).catch(()=>{}); db.library=db.library.filter(y=>y.id!==x.id); save(); rerender(); return; }
+  if(a==='sheetFull'){ stop(); S.docBack={view:S.view,evId:S.evId,songId:S.songId,ctx:S.ctx,songMode:'partitura'}; S.dvPanel=null; go({view:'doc',docId:el.dataset.id}); return; }
+  if(a==='nav'&&S.view==='doc'&&S.docBack&&el.closest('.dvbar')){ stop(); const b=S.docBack; S.docBack=null; S.songMode=b.songMode; go({view:b.view,evId:b.evId,songId:b.songId,ctx:b.ctx}); return; }
+},true);
+/* na Biblioteca, partitura mostra a música e abre por ela */
+(function(){ const _vb=viewBiblio; viewBiblio=function(){ let h=_vb(); (db.library||[]).filter(x=>x.songId).forEach(x=>{ const s=songById(x.songId); if(s) h=h.replace(`data-act="docOpen" data-id="${x.id}"><span class="bki">`,`data-act="docOpen" data-id="${x.id}"><span class="bki" title="${esc(s.title)}">`); }); return h; }; })();
 try{ render(); }catch(e){}
 
 </script>
