@@ -726,7 +726,7 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 <input type="file" id="irIn" accept=".html,.htm,.txt,text/html,text/plain" hidden>
 <script>
 /* ==== CONFIGURAÇÃO — cole aqui o Client ID do Google Cloud (opcional; também dá para colar em Ajustes) ==== */
-var CELEBRAR_CONFIG={ googleClientId: "" };
+var CELEBRAR_CONFIG={ googleClientId: "1015624555896-8t053n2h6om4nq4u2rsfac9827pslqpl.apps.googleusercontent.com" };
 </script>
 <script>
 /* ===== Teoria / cifras ===== */
@@ -4141,7 +4141,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='28 · 23/10/2026';
+var APP_VERSION='29 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
