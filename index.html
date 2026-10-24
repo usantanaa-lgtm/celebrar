@@ -3861,7 +3861,7 @@ function viewKey(key,s){
 }
 function modeNote(MD,VK,key,s){
   if(MD.id==='sopro'){ const sp=soproInfo(); return `<div class="mnote">🎷 <b>${esc(sp[1])}</b>: ${sp[2]?`a música soa em <b>${esc(key||'?')}</b>, e a cifra abaixo já está no tom do seu instrumento: <b>${esc(VK.key||'?')}</b>.`:'sem transposição.'} <button class="mini" data-act="modeOpen">trocar</button></div>`; }
-  if(MD.id==='violao'){ const cp=capoFor(key); if(!cp) return ''; return `<div class="mnote">🎸 ${db.prefs.capoOn?`Tocando com <b>capo na ${cp.c}ª casa</b>, com os desenhos de <b>${esc(cp.shape)}</b> (soa em ${esc(key)}).`:`Sugestão: <b>capo na ${cp.c}ª casa</b> e desenhos de <b>${esc(cp.shape)}</b>, mais fáceis que ${esc(key)}.`} <button class="mini ${db.prefs.capoOn?'on':''}" data-act="capoT">${db.prefs.capoOn?'Tirar capo':'Usar capo'}</button></div>`; }
+  if(MD.id==='violao'){ const cp=capoFor(key); if(!cp) return ''; return `<div class="mnote">🎸 ${db.prefs.capoOn?`Tocando com <b>capo na ${cp.c}ª casa</b>, com os desenhos de <b>${esc(cp.shape)}</b> (soa em ${esc(key)}). <small>Cifra escrita em ${esc(s.cifraKey||s.key||'?')}${s.cifra?' · <a href="#" data-act="editSong">corrigir</a>':''}</small>`:`Sugestão: <b>capo na ${cp.c}ª casa</b> e desenhos de <b>${esc(cp.shape)}</b>, mais fáceis que ${esc(key)}.`} <button class="mini ${db.prefs.capoOn?'on':''}" data-act="capoT">${db.prefs.capoOn?'Tirar capo':'Usar capo'}</button></div>`; }
   if(MD.id==='voz') return '';
   return '';
 }
@@ -4163,7 +4163,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='40 · 24/10/2026';
+var APP_VERSION='41 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4393,6 +4393,47 @@ document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); 
 (function(){ const _go=go; go=function(p,push){ _go(p,push); if(S.addAfter&&p&&p.view==='event'&&p.evId){ const sid=S.addAfter; S.addAfter=null; setTimeout(()=>{ S.modal={t:'addto',sid,key:(songById(sid)||{}).key,evId:p.evId}; render(); },50); } }; })();
 /* prévia da grade já aberta na importação */
 (function(){ const _ip=impPreview; impPreview=function(){ return _ip().replace('<details class="leit"><summary><b>Prévia da grade</b>','<details class="leit" open><summary><b>Prévia da grade</b>'); }; })();
+try{ render(); }catch(e){}
+
+/* ===================== Descobrir o tom em que a cifra está ESCRITA (pelos acordes) ===================== */
+function chordQ(c){ const p=splitChord(c); if(!p) return null; const q=p.q; const dim=/^(º|°|dim)/.test(q)||/m7\(?b5/.test(q); const min=!dim&&/^m(?!aj)/.test(q); return {r:IDX[p.root],t:dim?'d':min?'m':'M'}; }
+function keyScore(chs,root,minor){
+  const MAJ=[[0,'M'],[2,'m'],[4,'m'],[5,'M'],[7,'M'],[9,'m'],[11,'d']], MIN=[[0,'m'],[2,'d'],[3,'M'],[5,'m'],[7,'m'],[7,'M'],[8,'M'],[10,'M'],[11,'d']];
+  const set=minor?MIN:MAJ; let sc=0;
+  for(const c of chs){ const q=chordQ(c); if(!q) continue; const iv=(q.r-root+12)%12; if(set.some(([i,t])=>i===iv&&t===q.t)) sc+=1; else if(set.some(([i])=>i===iv)) sc+=0.4; else sc-=0.6; }
+  const f=chordQ(chs[0]||''), l=chordQ(chs[chs.length-1]||''); const tt=minor?'m':'M';
+  if(f&&f.r===root&&f.t===tt) sc+=2; if(l&&l.r===root&&l.t===tt) sc+=2.5; return sc;
+}
+function cifraChords(text){ const out=[]; sections(text||'').forEach(sec=>sec.lines.forEach(l=>{ if(l.t==='chord') out.push(...lineChords(l.s)); })); return out; }
+function detectKey(text){
+  const chs=cifraChords(text); if(chs.length<3) return null; let best=null;
+  for(let r=0;r<12;r++) for(const m of [false,true]){ const s=keyScore(chs,r,m); if(!best||s>best.s) best={s,r,m}; }
+  const name=NOTES_S[best.r]; const fl=['F','Bb','Eb','Ab','Db','Gb'].includes(NOTES_F[best.r]); const k=(fl?NOTES_F[best.r]:name)+(best.m?'m':'');
+  return {key:k,score:best.s,chords:chs};
+}
+function keyFits(text,key){ const pk=parseKey(key); if(!pk) return -99; return keyScore(cifraChords(text),pk.root,pk.minor); }
+/* corrige cifraKey quando ele não bate com os acordes escritos */
+function keyRatio(chs,key){ const pk=parseKey(key); if(!pk||!chs.length) return 0; const MAJ=[[0,'M'],[2,'m'],[4,'m'],[5,'M'],[7,'M'],[9,'m'],[11,'d']], MIN=[[0,'m'],[2,'d'],[3,'M'],[5,'m'],[7,'m'],[7,'M'],[8,'M'],[10,'M'],[11,'d']];
+  const set=pk.minor?MIN:MAJ; let ok=0,n=0; for(const c of chs){ const q=chordQ(c); if(!q) continue; n++; const iv=(q.r-pk.root+12)%12; if(set.some(([i,t])=>i===iv&&t===q.t)) ok++; } return n?ok/n:0; }
+/* só corrige quando os acordes claramente NÃO são do tom informado (ex.: cifra em Am marcada como Gm) */
+function fixCifraKey(s){
+  if(!s||!s.cifra) return false; const d=detectKey(s.cifra); if(!d||d.chords.length<4) return false; const cur=s.cifraKey||s.key; if(!cur) { s.cifraKey=d.key; return true; }
+  const rc=keyRatio(d.chords,cur), rd=keyRatio(d.chords,d.key); const pc=parseKey(cur), pd=parseKey(d.key);
+  const relative=pc&&pd&&((pc.root+(pc.minor?3:0))%12===(pd.root+(pd.minor?3:0))%12);
+  if(relative||!((rc<0.5&&rd>=0.8)||(rc<0.7&&rd>=0.95))) return false;
+  s.cifraKey=d.key; if(s.gridSource==='cifra') s.gridKey=d.key; return true;
+}
+(function(){ /* “Tom: Gm (forma dos acordes no tom de Em)” → soa em Gm, escrita em Em */
+  const _p=parseCifraText; parseCifraText=function(t,...a){ const r=_p(t,...a); const m=String(t||'').match(/forma dos acordes no tom de\s*([A-G][#b]?m?)/i); if(m) r.shape=m[1].charAt(0).toUpperCase()+m[1].slice(1); return r; };
+  const _u=upsertImported; upsertImported=function(p,...a){ const r=_u(p,...a); const s=(r&&r.id&&songById(r.id))||(r&&r.s)||db.songs.find(x=>x.cifra===p.text); if(s){ if(p.shape){ s.cifraKey=p.shape; if(s.gridSource==='cifra'){ s.grid=cifraToGrid(s.cifra); s.gridKey=p.shape; } } else fixCifraKey(s); save(); } return r; };
+  let ch=false; (db.songs||[]).forEach(s=>{ if(fixCifraKey(s)) ch=true; }); if(ch) save();
+})();
+(function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); const M=S.modal; if(M&&M.t==='song'&&M.s&&M.s.cifra){ const d=detectKey(M.s.cifra); const ck=M.s.cifraKey||M.s.key||'';
+  const sel=`<label>Cifra escrita em<select data-f="cifraKey">${ALL_KEYS.map(k=>`<option ${ck===k?'selected':''}>${k}</option>`).join('')}</select>${d?`<small class="hint" style="margin:2px 0 0">Pelos acordes parece <b>${esc(d.key)}</b>${d.key!==ck?` — <button type="button" class="mini" data-act="ckUse" data-k="${esc(d.key)}">usar ${esc(d.key)}</button>`:''}</small>`:''}</label>`;
+  h=h.replace(/(<label>Tom<select data-f="key">[\s\S]*?<\/select><\/label>)/,'$1'+sel); } return h; }; })();
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return;
+  if(el.dataset.act==='ckUse'){ e.stopImmediatePropagation(); e.preventDefault(); S.modal.s.cifraKey=el.dataset.k; render(); }
+  if(el.dataset.act==='saveSong'&&S.modal&&S.modal.s&&S.modal.s.gridSource==='cifra'&&S.modal.s.cifraKey) S.modal.s.gridKey=S.modal.s.cifraKey; },true);
 try{ render(); }catch(e){}
 
 </script>
