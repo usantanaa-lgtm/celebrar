@@ -716,6 +716,7 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .pstar,.pstar.on,.pstar:hover{background:transparent!important;box-shadow:none!important}
 .today2 .pcard .pcopen b{white-space:normal;line-height:1.25}
 .appband2 .abtn{min-width:0;overflow:hidden} .appband2 .abname{overflow:hidden}
+.acct{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;margin:4px 0 10px} .acct img,.acct .av{width:42px;height:42px;border-radius:50%;flex:none} .acct .av{display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-weight:700} .acct .tx{display:flex;flex-direction:column;min-width:0} .acct small{color:var(--muted);overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -3442,7 +3443,7 @@ async function gdAuth(interactive){
     GD.client=google.accounts.oauth2.initTokenClient({client_id:cid,scope:'https://www.googleapis.com/auth/drive.file openid email profile',
       callback:r=>{ if(r.error){ err(new Error(r.error)); return; } GD.token=r.access_token; GD.exp=Date.now()+(+r.expires_in||3600)*1000; db.prefs.gdLinked=true; save0(); ok(GD.token); },
       error_callback:e=>err(new Error(e&&e.type==='popup_closed'?'Janela do Google fechada':'Não foi possível entrar no Google'))});
-    GD.client.requestAccessToken({prompt:interactive&&!db.prefs.gdLinked?'consent':''});
+    GD.client.requestAccessToken({prompt:interactive&&!db.prefs.gdLinked?'select_account':''});
   });
 }
 async function gdFetch(url,opt={}){
@@ -4141,11 +4142,28 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='30 · 24/10/2026';
+var APP_VERSION='31 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
   location.replace(location.pathname+'?v='+Date.now()); },true);
+try{ render(); }catch(e){}
+
+/* ===================== Minha conta acessível também no celular ===================== */
+function acctHtml(){
+  const em=db.prefs.userEmail, linked=db.prefs.gdLinked;
+  return `<label class="lbl">Minha conta</label><div class="acct">${db.prefs.userPic?`<img src="${esc(db.prefs.userPic)}" alt="" referrerpolicy="no-referrer">`:`<span class="av">${esc(userName().split(/\s+/).map(x=>x[0]).slice(0,2).join(''))}</span>`}
+    <div class="tx"><b>${esc(userName())}</b><small>${em?esc(em):linked?'Google Drive conectado':'Sem conta Google — dados só neste aparelho'}</small></div>
+    <span class="sp"></span>${linked||em?`<button data-act="acctSwitch">Trocar de conta</button><button class="danger" data-act="logout">Sair</button>`:`<button class="pri" data-act="loginGoogle">Entrar com o Google</button>`}</div>`;
+}
+(function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu'){ const i=h.indexOf('<div class="hint">'); if(i>0) h=h.slice(0,i)+acctHtml()+h.slice(i); } return h; }; })();
+(function(){ const _g=gdRun; gdRun=async function(k){ await _g(k); if(gdOnline()){ await gdProfile(); if(S.modal&&S.modal.t==='menu') render(); } }; })();
+(function(){ const _st=gdStatusText; gdStatusText=function(){ const em=db.prefs.userEmail; if(!em||!db.prefs.gdLinked||!gdClientId()) return _st();
+  return (gdOnline()?'Conectado como '+em:'Conta '+em+' — toque em Salvar ou Trazer para reconectar')+(db.prefs.gdLast?' · última sincronização '+new Date(db.prefs.gdLast).toLocaleString('pt-BR'):''); }; })();
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act="acctSwitch"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
+  if(!confirm('Trocar de conta Google? Os dados deste aparelho continuam aqui; depois de entrar com a outra conta, use "Trazer do Drive" para ver os dados dela.')) return;
+  try{ if(GD.token&&window.google) google.accounts.oauth2.revoke(GD.token,()=>{}); }catch(x){} GD.token=null; GD.fileId=null; GD.folderId=null; GD.libFolder=null; db.prefs.gdLinked=false; db.prefs.userEmail=''; db.prefs.userPic=''; save0(); render();
+  (async()=>{ try{ await gdRun('connect'); }catch(err){} })(); },true);
 try{ render(); }catch(e){}
 
 </script>
