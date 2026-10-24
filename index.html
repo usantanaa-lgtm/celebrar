@@ -717,6 +717,14 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .today2 .pcard .pcopen b{white-space:normal;line-height:1.25}
 .appband2 .abtn{min-width:0;overflow:hidden} .appband2 .abname{overflow:hidden}
 .acct{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;margin:4px 0 10px} .acct img,.acct .av{width:42px;height:42px;border-radius:50%;flex:none} .acct .av{display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-weight:700} .acct .tx{display:flex;flex-direction:column;min-width:0} .acct small{color:var(--muted);overflow-wrap:anywhere}
+.syncbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin:10px 0 0;font-size:14px} .syncbar span{flex:1;min-width:160px} .syncbar.warn{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 10%,var(--surface))} .syncbar.busy{color:var(--muted)}
+@media (max-width:899px){
+  .side{display:flex!important;position:fixed;left:0;top:0;bottom:0;height:100vh!important;width:min(290px,84vw);z-index:70;transform:translateX(-105%);transition:transform .22s ease;box-shadow:none;padding-top:14px;overflow:auto}
+  body.drawer .side{transform:none;box-shadow:0 0 40px rgba(0,0,0,.35)}
+  body.drawer .side .tx{display:inline!important} body.drawer .si{justify-content:flex-start!important;padding:8px 10px!important}
+  .drawerbk{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:65}
+  body.drawer{overflow:hidden}
+}
 </style>
 </head>
 <body>
@@ -3371,7 +3379,7 @@ document.addEventListener('change',e=>{ if(e.target.id==='etCopy'&&e.target.valu
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
   const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
-  if(a==='crossTap'){ stop(); if(window.innerWidth<900){ go({view:'home'}); return; } db.prefs.side=db.prefs.side==='col'?'':'col'; save(); render(); return; }
+  if(a==='crossTap'){ stop(); if(window.innerWidth<900){ S.drawer=!S.drawer; render(); return; } db.prefs.side=db.prefs.side==='col'?'':'col'; save(); render(); return; }
   if(a==='libClose'){ stop(); S.songId=null; render(); return; }
   /* orações */
   if(a==='prayEdit'){ stop(); S.prayEdit=!S.prayEdit; render(); return; }
@@ -4142,7 +4150,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='31 · 24/10/2026';
+var APP_VERSION='33 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4164,6 +4172,91 @@ document.addEventListener('click',e=>{ const el=e.target.closest('[data-act="acc
   if(!confirm('Trocar de conta Google? Os dados deste aparelho continuam aqui; depois de entrar com a outra conta, use "Trazer do Drive" para ver os dados dela.')) return;
   try{ if(GD.token&&window.google) google.accounts.oauth2.revoke(GD.token,()=>{}); }catch(x){} GD.token=null; GD.fileId=null; GD.folderId=null; GD.libFolder=null; db.prefs.gdLinked=false; db.prefs.userEmail=''; db.prefs.userPic=''; save0(); render();
   (async()=>{ try{ await gdRun('connect'); }catch(err){} })(); },true);
+try{ render(); }catch(e){}
+
+/* ===================== Sincronização segura com o Drive (junta, não sobrescreve) ===================== */
+var SYNC_COLS=['songs','events','texts','library'];
+var SHARED_PREFS=['prayCats','catRename','prayHidden','evTypes','libCats','invMemo','prayFav','userName','banner','motto'];
+var SNAP={}, SYNC={busy:false,timer:null,hide:false};
+function _h(o){ return JSON.stringify(o,(k,v)=>k==='_m'?undefined:v); }
+function sharedPrefs(){ const o={}; SHARED_PREFS.forEach(k=>{ if(db.prefs[k]!=null) o[k]=db.prefs[k]; }); return o; }
+function snapTake(){ SNAP={}; SYNC_COLS.forEach(c=>(db[c]||[]).forEach(r=>{ if(r&&r.id) SNAP[c+':'+r.id]=_h(r); })); SNAP.__prefs=_h(sharedPrefs()); }
+function markChanges(){
+  const now=Date.now(); const seen=new Set(); const T=db.prefs.tomb=db.prefs.tomb||{}; let ch=false;
+  SYNC_COLS.forEach(c=>(db[c]||[]).forEach(r=>{ if(!r||!r.id) return; const k=c+':'+r.id; seen.add(k); const hh=_h(r); if(SNAP[k]!==hh){ r._m=now; ch=true; if(T[r.id]) delete T[r.id]; } }));
+  for(const k in SNAP){ if(k==='__prefs'||seen.has(k)) continue; T[k.split(':').slice(1).join(':')]=now; ch=true; }
+  if(_h(sharedPrefs())!==SNAP.__prefs){ db.prefs.prefsM=now; ch=true; }
+  for(const id in T) if(now-T[id]>1000*60*60*24*120) delete T[id];
+  if(ch) db.prefs.dirtyAt=now; snapTake(); return ch;
+}
+function isDirty(){ return (db.prefs.dirtyAt||0)>(db.prefs.gdLast||0); }
+/* junta os dados do Drive com os deste aparelho, item por item (vale o mais recente) */
+function mergeRemote(d){
+  if(!d) return {added:0,updated:0,removed:0};
+  const T=db.prefs.tomb=db.prefs.tomb||{}; const RT=d.tomb||(d.prefs&&d.prefs.tomb)||{}; let added=0,updated=0,removed=0;
+  SYNC_COLS.forEach(c=>{ db[c]=db[c]||[]; const map=new Map(db[c].map(r=>[r.id,r]));
+    for(const rr of (d[c]||[])){ if(!rr||!rr.id) continue; if(T[rr.id]&&T[rr.id]>=(rr._m||0)) continue; const lr=map.get(rr.id);
+      if(!lr){ db[c].push(rr); map.set(rr.id,rr); added++; }
+      else if((rr._m||0)>(lr._m||0)){ const i=db[c].indexOf(lr); db[c][i]=c==='library'?{...rr,lastPage:lr.lastPage||rr.lastPage}:rr; map.set(rr.id,db[c][i]); updated++; } }
+    db[c]=db[c].filter(r=>{ const t=RT[r.id]; if(t&&t>=(r._m||0)){ removed++; return false; } return true; }); });
+  for(const id in RT) if(!T[id]||RT[id]>T[id]) T[id]=RT[id];
+  const rp=d.prefs||{}; if((rp.prefsM||0)>(db.prefs.prefsM||0)){ SHARED_PREFS.forEach(k=>{ if(rp[k]!=null) db.prefs[k]=rp[k]; }); db.prefs.prefsM=rp.prefsM; }
+  snapTake(); save0(); return {added,updated,removed};
+}
+function gdPayload(){ const p=sharedPrefs(); p.prefsM=db.prefs.prefsM||0;
+  return JSON.stringify({app:'celebrar',v:3,savedAt:new Date().toISOString(),songs:db.songs,events:db.events,texts:db.texts,library:db.library,tomb:db.prefs.tomb||{},prefs:p}); }
+async function gdUploadRaw(){
+  const body=gdPayload(); const id=await gdFind();
+  if(id){ await gdFetch(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body}); }
+  else { const folder=await gdFolder(); const b='celebrar'+Date.now();
+    const multi=`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:GD_FILE,parents:[folder],mimeType:'application/json'})}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${b}--`;
+    const r=await (await gdFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body:multi})).json(); GD.fileId=r.id; }
+  db.prefs.gdLast=Date.now(); db.prefs.lastBackup=Date.now(); save0();
+}
+/* toda gravação no Drive primeiro busca o que está lá e junta */
+async function gdUpload(){ const d=await gdDownload(); const r=mergeRemote(d); await gdUploadRaw(); return r; }
+async function gdSync(interactive){
+  if(SYNC.busy) return; SYNC.busy=true; syncBar('sincronizando'); let res=null;
+  try{ await gdAuth(interactive!==false); markChanges(); res=await gdUpload(); db.prefs.gdLinked=true; save0();
+    const n=res.added+res.updated+res.removed; toast(n?`Sincronizado: ${res.added?res.added+' novo(s) ':''}${res.updated?res.updated+' atualizado(s) ':''}${res.removed?res.removed+' removido(s)':''}`.trim():'Tudo sincronizado com o Drive');
+  }catch(e){ toast(e.message||'Não consegui sincronizar'); }
+  SYNC.busy=false; render(); return res;
+}
+async function gdRun(kind){ /* connect, up, down → sempre sincroniza nos dois sentidos */
+  if(GD.busy) return; GD.busy=true;
+  try{ await gdAuth(true); GD.busy=false; await gdSync(false); }catch(e){ GD.busy=false; toast(e.message||'Erro com o Drive'); render(); }
+}
+function gdApply(d){ const r=mergeRemote(d); render(); toast(`Do Drive: ${r.added} novo(s), ${r.updated} atualizado(s)`); }
+/* grava neste aparelho; se a sessão do Google estiver ativa, sincroniza em ~4 s */
+(function(){ const _s=save0; save=function(){ markChanges(); _s(); if(db.prefs.gdLinked&&db.prefs.gdAuto!==false&&gdOnline()){ clearTimeout(SYNC.timer); SYNC.timer=setTimeout(()=>{ gdUpload().then(()=>syncBar()).catch(()=>{}); },4000); } else syncBar(); }; })();
+/* faixa de sincronização no topo do conteúdo */
+function syncBarHtml(state){
+  if(!db.prefs.gdLinked||!gdClientId()||SYNC.hide) return '';
+  if(state==='sincronizando') return `<div class="syncbar busy">☁ Sincronizando com o Drive…</div>`;
+  if(gdOnline()&&!isDirty()) return '';
+  if(gdOnline()&&isDirty()) return `<div class="syncbar">☁ Salvando no Drive…</div>`;
+  return `<div class="syncbar ${isDirty()?'warn':''}"><span>☁ ${isDirty()?'Há mudanças só neste aparelho.':'Toque para pegar as novidades do Drive.'}</span><button data-act="syncNow">↻ Sincronizar</button><button class="ghost" data-act="syncHide" aria-label="Fechar">✕</button></div>`;
+}
+function syncBar(state){ const el=document.getElementById('syncbar'); if(el) el.innerHTML=syncBarHtml(state); }
+(function(){ const _r=render; render=function(){ _r(); const w=document.querySelector('main.wrap'); if(w&&!document.getElementById('syncbar')){ const d=document.createElement('div'); d.id='syncbar'; w.prepend(d); } syncBar(SYNC.busy?'sincronizando':undefined); }; })();
+(function(){ const _st=gdStatusText; gdStatusText=function(){ return _st()+(isDirty()?' · há mudanças ainda não enviadas':''); }; })();
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
+  if(a==='syncNow'){ e.stopImmediatePropagation(); e.preventDefault(); gdSync(true); }
+  if(a==='syncHide'){ e.stopImmediatePropagation(); e.preventDefault(); SYNC.hide=true; syncBar(); }
+},true);
+/* ao voltar para o app (trocar de aba / desbloquear o celular) com sessão ativa, busca novidades */
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&db.prefs.gdLinked&&gdOnline()&&!SYNC.busy) gdSync(false); });
+snapTake();
+try{ render(); }catch(e){}
+
+/* ===================== Menu lateral como gaveta no celular e no tablet em pé ===================== */
+(function(){ const _r=render; render=function(){ _r(); const on=!!S.drawer&&window.innerWidth<900&&!S.stage&&!S.rotPlay&&db.prefs.welcomed;
+  document.body.classList.toggle('drawer',on);
+  let bk=document.getElementById('drawerBk'); if(on&&!bk){ bk=document.createElement('div'); bk.id='drawerBk'; bk.className='drawerbk'; bk.addEventListener('click',()=>{ S.drawer=false; render(); }); document.body.appendChild(bk); }
+  if(!on&&bk) bk.remove(); }; })();
+window.addEventListener('click',e=>{ if(!S.drawer) return; const el=e.target.closest('.side [data-act]'); if(el) S.drawer=false; },true);
+window.addEventListener('resize',()=>{ if(S.drawer&&window.innerWidth>=900){ S.drawer=false; render(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&S.drawer){ S.drawer=false; render(); } });
 try{ render(); }catch(e){}
 
 </script>
