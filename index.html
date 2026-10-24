@@ -741,6 +741,7 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .cloud{position:relative} .cloud i{position:absolute;right:7px;bottom:7px;width:9px;height:9px;border-radius:50%;border:2px solid #8c1d2c} .c-ok i{background:#4caf6a} .c-dirty i{background:#f0b429} .c-old i{background:#c9c9c9} .c-busy i{display:none} .c-busy{animation:spin 1s linear infinite} @keyframes spin{to{transform:rotate(360deg)}}
 .sheets .sheetbox{border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:10px 0;overflow:hidden} .sbh{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap} .sbh small{color:var(--muted)} .sheetview{background:#fff;padding:6px} .sheetview img,.sheetview canvas{display:block;width:100%;height:auto;margin:0 auto 6px}
 .scard2 .tgs{flex-wrap:wrap} .scard2 .ttl{min-width:0;overflow:hidden}
+.capobar{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center} .capobar select{width:auto;min-height:34px;padding:2px 8px;font-size:14px} .capobar small{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -3858,15 +3859,20 @@ function trKey(k,semi){ if(!k||!semi) return k; const a=transposeChord(k,semi,fa
 var EASY_MAJ=['C','G','D','A','E'], EASY_MIN=['Am','Em','Dm'];
 function capoFor(k){ if(!k) return null; const minor=/m$/.test(k)&&!/maj$/.test(k); const easy=minor?EASY_MIN:EASY_MAJ; if(easy.includes(k)) return null;
   for(let c=1;c<=7;c++){ const sh=trKey(k,-c); if(easy.includes(sh)) return {c,shape:sh}; } return null; }
+/* capo escolhido por música (vale em todos os aparelhos); sem escolha, segue a sugestão se “usar capo” estiver ligado */
+function capoNow(key,s){ if(s&&s.capoPlay!=null&&s.capoPlay!=='') return +s.capoPlay||0; if(db.prefs.capoOn){ const cp=capoFor(key); return cp?cp.c:0; } return 0; }
 function viewKey(key,s){
   const MD=instMode();
   if(MD.id==='sopro'){ const sp=soproInfo(); if(sp[2]) return {key:trKey(key,sp[2]),shift:sp[2],label:sp[1]}; }
-  if(MD.id==='violao'&&db.prefs.capoOn){ const cp=capoFor(key); if(cp) return {key:cp.shape,capo:cp.c}; }
+  if(MD.id==='violao'){ const n=capoNow(key,s); if(n>0) return {key:trKey(key,-n),capo:n}; }
   return {key};
 }
 function modeNote(MD,VK,key,s){
   if(MD.id==='sopro'){ const sp=soproInfo(); return `<div class="mnote">🎷 <b>${esc(sp[1])}</b>: ${sp[2]?`a música soa em <b>${esc(key||'?')}</b>, e a cifra abaixo já está no tom do seu instrumento: <b>${esc(VK.key||'?')}</b>.`:'sem transposição.'} <button class="mini" data-act="modeOpen">trocar</button></div>`; }
-  if(MD.id==='violao'){ const cp=capoFor(key); if(!cp) return ''; return `<div class="mnote">🎸 ${db.prefs.capoOn?`Tocando com <b>capo na ${cp.c}ª casa</b>, com os desenhos de <b>${esc(cp.shape)}</b> (soa em ${esc(key)}). <small>Cifra escrita em ${esc(s.cifraKey||s.key||'?')}${s.cifra?' · <a href="#" data-act="editSong">corrigir</a>':''}</small>`:`Sugestão: <b>capo na ${cp.c}ª casa</b> e desenhos de <b>${esc(cp.shape)}</b>, mais fáceis que ${esc(key)}.`} <button class="mini ${db.prefs.capoOn?'on':''}" data-act="capoT">${db.prefs.capoOn?'Tirar capo':'Usar capo'}</button></div>`; }
+  if(MD.id==='violao'){ const cp=capoFor(key); const n=capoNow(key,s); const opts=[0,1,2,3,4,5,6,7,8,9].map(c=>`<option value="${c}" ${c===n?'selected':''}>${c?c+'ª casa — desenhos de '+trKey(key,-c):'Sem capo — '+key}${cp&&cp.c===c?' ★':''}</option>`).join('');
+    return `<div class="mnote capobar">🎸 <label>Capotraste: <select data-act2="capoSel" data-id="${s.id}">${opts}</select></label>
+      <span>${n?`Toque os desenhos de <b>${esc(trKey(key,-n))}</b> com capo na ${n}ª — soa em ${esc(key)}.`:(cp?`Sugestão: capo na <b>${cp.c}ª</b> (desenhos de ${esc(cp.shape)}), marcada com ★.`:'')}</span>
+      <small>Cifra escrita em ${esc(s.cifraKey||s.key||'?')}${s.cifra?' · <a href="#" data-act="editSong">corrigir</a>':''}</small></div>`; }
   if(MD.id==='voz') return '';
   return '';
 }
@@ -3899,7 +3905,7 @@ function modeModal(){
 (function(){ const _m=modalHtml; modalHtml=function(){ if(S.modal&&S.modal.t==='modes') return modeModal(); let h=_m();
   if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Meu modo de tocar</label><div class="bar"><button data-act="modeOpen">${instMode().ic} ${esc(instMode().n)} — trocar…</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 (function(){ const _t=topbar; topbar=function(){ const MD=instMode(); return _t().replace('<span class="bicons">',`<span class="bicons"><button class="bmode" data-act="modeOpen" title="Meu modo de tocar: ${esc(MD.n)}"><span>${MD.ic}</span><span class="hide-sm">${esc(MD.n.split(' /')[0])}</span></button>`); }; })();
-document.addEventListener('change',e=>{ if(e.target.dataset.act2==='soproSel'){ db.prefs.sopro=e.target.value; save(); render(); } },true);
+document.addEventListener('change',e=>{ if(e.target.dataset.act2==='capoSel'){ const so=songById(e.target.dataset.id); if(so){ so.capoPlay=+e.target.value; save(); rerender(); } return; } if(e.target.dataset.act2==='soproSel'){ db.prefs.sopro=e.target.value; save(); render(); } },true);
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
   const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
@@ -4168,7 +4174,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='44 · 24/10/2026';
+var APP_VERSION='45 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
