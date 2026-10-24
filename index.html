@@ -717,7 +717,7 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .today2 .pcard .pcopen b{white-space:normal;line-height:1.25}
 .appband2 .abtn{min-width:0;overflow:hidden} .appband2 .abname{overflow:hidden}
 .acct{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;margin:4px 0 10px} .acct img,.acct .av{width:42px;height:42px;border-radius:50%;flex:none} .acct .av{display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-weight:700} .acct .tx{display:flex;flex-direction:column;min-width:0} .acct small{color:var(--muted);overflow-wrap:anywhere}
-.syncbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin:10px 0 0;font-size:14px} .syncbar span{flex:1;min-width:160px} .syncbar.warn{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 10%,var(--surface))} .syncbar.busy{color:var(--muted)}
+#syncbar{position:fixed;right:16px;bottom:16px;z-index:45;max-width:min(440px,calc(100vw - 32px));pointer-events:none} #syncbar .syncbar{pointer-events:auto;box-shadow:0 6px 24px rgba(0,0,0,.18)} @media (max-width:640px){ #syncbar{right:12px;left:12px;bottom:calc(72px + env(safe-area-inset-bottom));max-width:none} } .syncbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:14px} .syncbar span{flex:1;min-width:160px} .syncbar.warn{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 10%,var(--surface))} .syncbar.busy{color:var(--muted)}
 @media (max-width:899px){
   .side{display:flex!important;position:fixed;left:0;top:0;bottom:0;height:100vh!important;width:min(290px,84vw);z-index:70;transform:translateX(-105%);transition:transform .22s ease;box-shadow:none;padding-top:14px;overflow:auto}
   body.drawer .side{transform:none;box-shadow:0 0 40px rgba(0,0,0,.35)}
@@ -726,6 +726,8 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
   body.drawer{overflow:hidden}
 }
 .shbox{border:1px dashed var(--line);border-radius:12px;padding:8px 12px;margin:0 0 10px} .shbox .bar input{flex:1;min-width:0}
+.backlab{display:inline-flex;align-items:center;gap:4px;width:auto!important;padding:0 10px!important;white-space:nowrap} .backlab small{font-size:13px;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.addrep{border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:999px;padding:4px 12px;min-height:34px;font-weight:600;font-size:13.5px;white-space:nowrap} .addmini{color:var(--accent);font-size:20px} .srow.on{border-color:var(--accent);background:var(--accent-soft)}
 </style>
 </head>
 <body>
@@ -4151,7 +4153,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='35 · 24/10/2026';
+var APP_VERSION='38 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4233,13 +4235,13 @@ function gdApply(d){ const r=mergeRemote(d); render(); toast(`Do Drive: ${r.adde
 /* faixa de sincronização no topo do conteúdo */
 function syncBarHtml(state){
   if(!db.prefs.gdLinked||!gdClientId()||SYNC.hide) return '';
-  if(state==='sincronizando') return `<div class="syncbar busy">☁ Sincronizando com o Drive…</div>`;
-  if(gdOnline()&&!isDirty()) return '';
-  if(gdOnline()&&isDirty()) return `<div class="syncbar">☁ Salvando no Drive…</div>`;
+  if(state==='sincronizando') return `<div class="syncbar busy">☁ Sincronizando…</div>`;
+  if(gdOnline()) return '';
   return `<div class="syncbar ${isDirty()?'warn':''}"><span>☁ ${isDirty()?'Há mudanças só neste aparelho.':'Toque para pegar as novidades do Drive.'}</span><button data-act="syncNow">↻ Sincronizar</button><button class="ghost" data-act="syncHide" aria-label="Fechar">✕</button></div>`;
 }
 function syncBar(state){ const el=document.getElementById('syncbar'); if(el) el.innerHTML=syncBarHtml(state); }
-(function(){ const _r=render; render=function(){ _r(); const w=document.querySelector('main.wrap'); if(w&&!document.getElementById('syncbar')){ const d=document.createElement('div'); d.id='syncbar'; w.prepend(d); } syncBar(SYNC.busy?'sincronizando':undefined); }; })();
+(function(){ const _r=render; render=function(){ _r(); let d=document.getElementById('syncbar'); if(!d){ d=document.createElement('div'); d.id='syncbar'; document.body.appendChild(d); }
+  d.style.display=(S.stage||S.rotPlay||!db.prefs.welcomed)?'none':''; syncBar(SYNC.busy?'sincronizando':undefined); }; })();
 (function(){ const _st=gdStatusText; gdStatusText=function(){ return _st()+(isDirty()?' · há mudanças ainda não enviadas':''); }; })();
 document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
   if(a==='syncNow'){ e.stopImmediatePropagation(); e.preventDefault(); gdSync(true); }
@@ -4305,6 +4307,82 @@ document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); 
 },true);
 /* ao trocar de conta ou sair, esquece o arquivo escolhido (ele pertence à sessão daquela conta) */
 window.addEventListener("click",e=>{ const el=e.target.closest('[data-act="acctSwitch"],[data-act="logout"]'); if(el){ delete db.prefs.gdFileId; delete db.prefs.gdFileName; GD.fileId=null; } },true);
+try{ render(); }catch(e){}
+
+/* ===================== Correções: letras com acordes, voltar ao repertório, página pulando ===================== */
+/* 1) arquivos .txt do Windows vêm com \r no fim das linhas — isso fazia linhas de acordes virarem "letra" */
+(function(){ const _sec=sections; sections=function(t){ return _sec(String(t||'').replace(/\r/g,'')); };
+  const _p=parseCifraText; parseCifraText=function(t,...a){ return _p(String(t||'').replace(/\r/g,''),...a); };
+  const _icl=isChordLine; isChordLine=function(l){ const x=String(l).replace(/\r/g,''); return _icl(x)||(/^\s*\[[^\]]+\]\s+\S/.test(x)&&_icl(x.replace(/^\s*\[[^\]]+\]/,' '))); };
+  let ch=false; (db.songs||[]).forEach(s=>{ if(s.cifra&&/\r/.test(s.cifra)){ s.cifra=s.cifra.replace(/\r/g,''); ch=true; } if(s.grid&&/\r/.test(s.grid)){ s.grid=s.grid.replace(/\r/g,''); ch=true; } }); if(ch) save();
+})();
+function lyricsOf(s){ return sections(s.cifra||'').map(sec=>{ const ly=sec.lines.filter(l=>l.t==='lyric').map(l=>l.s.trim()).filter(x=>x&&!/^\[[^\]]+\]\s*$/.test(x)); return ly.length?(sec.name?`[${sec.name}]\n`:'')+ly.join('\n'):''; }).filter(Boolean).join('\n\n'); }
+/* 2) navegação: só volta ao topo quando muda de tela; guarda de onde você veio */
+function go(p,push=true){
+  const from={view:S.view,evId:S.evId,ctx:S.ctx,songId:S.songId,y:window.scrollY};
+  Object.assign(S,p);
+  if(S.view==='song'&&from.view!=='song') S.backTo=from;
+  if(push) try{ history.pushState({v:S.view,evId:S.evId,songId:S.songId,ctx:S.ctx},''); }catch(e){}
+  render();
+  if(S.view!==from.view||S.evId!==from.evId) window.scrollTo(0,0);
+}
+try{ history.replaceState({v:S.view,evId:S.evId,songId:S.songId,ctx:S.ctx},''); }catch(e){}
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act="songBack"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
+  const b=S.backTo; S.backTo=null;
+  if(b&&b.view&&b.view!=='song'){ go({view:b.view,evId:b.evId,ctx:b.view==='event'?null:b.ctx,songId:b.view==='lib'?b.songId:null}); setTimeout(()=>window.scrollTo(0,b.y||0),0); return; }
+  if(S.evId&&(S.ctx!=null)) go({view:'event',songId:null,ctx:null}); else go({view:'lib',songId:null}); },true);
+/* volta: mostra para onde vai */
+(function(){ const _sp=songPanel; songPanel=function(){ let h=_sp(); const b=S.backTo; if(S.view==='song'&&b){ const lab=b.view==='event'||b.view==='roteiro'?(evById(b.evId)||{}).name:({lib:'Acervo',home:'Início',arrlib:'Meus arranjos',reps:'Repertórios'})[b.view]; if(lab) h=h.replace('<button class="ghost back" data-act="songBack" aria-label="Voltar">‹</button>',`<button class="ghost back backlab" data-act="songBack" aria-label="Voltar">‹ <small>${esc(lab)}</small></button>`); } return h; }; })();
+/* 3) ao redesenhar a mesma tela, mantém a rolagem da página e dos painéis */
+(function(){ const _r=render; let last=''; render=function(){
+  const key=[S.view,S.evId,S.songId,S.docId].join('|'); const same=key===last;
+  const y=window.scrollY; const panes={}; if(same) document.querySelectorAll('.mpane,.pane-song,.pane-list,.mlist,.mpane .sheet').forEach((el,i)=>{ panes[i]=el.scrollTop; });
+  _r(); last=[S.view,S.evId,S.songId,S.docId].join('|');
+  if(same&&last===key){ document.querySelectorAll('.mpane,.pane-song,.pane-list,.mlist,.mpane .sheet').forEach((el,i)=>{ if(panes[i]!=null) el.scrollTop=panes[i]; }); if(Math.abs(window.scrollY-y)>2) window.scrollTo(0,y); }
+}; })();
+try{ render(); }catch(e){}
+
+/* ===================== Texto colado do site (caracteres invisíveis) + grade para toda cifra ===================== */
+function cleanText(t){ return String(t||'').replace(/\r/g,'').replace(/\p{Cf}/gu,'').replace(/[\p{Zs}\t]/gu,' ').replace(/[♯＃]/g,'#').replace(/♭/g,'b').replace(/[\u2215\u2044\uFF0F]/g,'/'); }
+(function(){ const _sec=sections; sections=function(t){ return _sec(cleanText(t)); };
+  const _p=parseCifraText; parseCifraText=function(t,...a){ return _p(cleanText(t),...a); };
+  const _g=cifraToGrid; cifraToGrid=function(t){ return _g(cleanText(t)); };
+  let ch=false; (db.songs||[]).forEach(s=>{ if(!s.cifra) return; const c=cleanText(s.cifra); if(c!==s.cifra){ s.cifra=c; ch=true; }
+    if(!s.grid||s.gridSource==='cifra'){ const g=cifraToGrid(s.cifra); if(g&&g!==s.grid){ s.grid=g; s.gridKey=s.cifraKey||s.key; s.gridSource='cifra'; ch=true; } } });
+  if(ch) save();
+})();
+
+/* ===================== Adicionar música a um repertório ===================== */
+function addToModal(){
+  const M=S.modal; const s=songById(M.sid); if(!s) return '';
+  const today0=today(); const evs=[...db.events].sort((a,b)=>{ const fa=(a.date||'')>=today0, fb=(b.date||'')>=today0; if(fa!==fb) return fa?-1:1; return fa?(a.date||'').localeCompare(b.date||''):(b.date||'').localeCompare(a.date||''); });
+  const ev=M.evId&&evById(M.evId);
+  if(!ev) return `<div class="modal"><div class="box"><h3>Adicionar “${esc(s.title)}”</h3><div class="hint">Escolha o repertório (evento):</div>
+    <div class="slist">${evs.slice(0,40).map(e=>{ const has=flatItems(e).some(f=>f.it.songId===s.id); return `<button class="srow" data-act="addToEv" data-id="${e.id}"><span class="tx"><b>${esc(e.name)}</b><small>${e.date?fmtDate(e.date):'sem data'}${(e.date||'')>=today0?' · próximo':''}${has?' · ✓ já tem esta música':''}</small></span><span>›</span></button>`; }).join('')||'<div class="empty">Nenhum repertório ainda.</div>'}</div>
+    <div class="bar end"><button data-act="addToNew">＋ Novo repertório</button><span class="sp"></span><button data-act="closeModal">Cancelar</button></div></div></div>`;
+  const mom=(s.momentos||[]).map(nrm); const guess=ev.blocks.find(b=>mom.some(m=>nrm(b.name).includes(m)||m.includes(nrm(b.name))));
+  return `<div class="modal"><div class="box"><h3>Em qual momento?</h3><div class="hint">${esc(ev.name)}${ev.date?' · '+fmtDate(ev.date):''}</div>
+    <div class="slist">${ev.blocks.map(b=>`<button class="srow ${guess&&guess.id===b.id?'on':''}" data-act="addToBlk" data-id="${b.id}"><span class="tx"><b>${esc(b.name)}</b><small>${b.items.length} música${b.items.length===1?'':'s'}${guess&&guess.id===b.id?' · sugerido':''}</small></span><span>＋</span></button>`).join('')}</div>
+    <label class="lbl">Tom</label><select id="addKey" style="width:auto">${keyOptions(M.key||s.key,s.key)}</select>
+    <div class="bar end"><button data-act="addToBack">‹ Outro repertório</button><span class="sp"></span><button data-act="closeModal">Cancelar</button></div></div></div>`;
+}
+(function(){ const _m=modalHtml; modalHtml=function(){ if(S.modal&&S.modal.t==='addto') return addToModal(); return _m(); }; })();
+(function(){ const _sp=songPanel; songPanel=function(){ let h=_sp(); const c=songCtx(); if(!c) return h;
+  return h.replace('<div class="hacts">',`<div class="hacts"><button class="addrep" data-act="addTo" data-id="${c.s.id}" title="Adicionar a um repertório">＋ Repertório</button>`); }; })();
+(function(){ const _vl=viewLib; viewLib=function(){ return _vl().replace(/<button class="star ([^"]*)" data-act="fav" data-id="([^"]+)"/g,'<button class="ghost ib addmini" data-act="addTo" data-id="$2" title="Adicionar a um repertório">＋</button><button class="star $1" data-act="fav" data-id="$2"'); }; })();
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
+  const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
+  if(a==='addTo'){ stop(); const c=songCtx(); const s=songById(el.dataset.id); S.modal={t:'addto',sid:el.dataset.id,key:(c&&c.s.id===el.dataset.id?c.key:null)||(s&&s.key),evId:null}; render(); return; }
+  if(a==='addToEv'){ stop(); S.modal.evId=el.dataset.id; render(); return; }
+  if(a==='addToBack'){ stop(); S.modal.evId=null; render(); return; }
+  if(a==='addToNew'){ stop(); const sid=S.modal.sid; const d=nextSunday(today()); const L=litInfo(d); S.addAfter=sid; S.modal={t:'newEv',d:{tpl:(evTypes()[0]||{id:'livre'}).id,date:d,name:L.titulo||'Missa',time:'',place:'',with:'',blocks:''}}; render(); return; }
+  if(a==='addToBlk'){ stop(); const M=S.modal; const ev=evById(M.evId); const b=ev&&ev.blocks.find(x=>x.id===el.dataset.id); if(!b) return; const key=(document.getElementById('addKey')||{}).value||M.key||'';
+    b.items.push({id:uid(),songId:M.sid,key,note:''}); save(); S.modal=null; render(); toast(`Adicionada em ${b.name} · ${ev.name}`); return; }
+},true);
+/* depois de criar o repertório pelo “＋ Novo repertório”, volta para escolher o momento */
+(function(){ const _go=go; go=function(p,push){ _go(p,push); if(S.addAfter&&p&&p.view==='event'&&p.evId){ const sid=S.addAfter; S.addAfter=null; setTimeout(()=>{ S.modal={t:'addto',sid,key:(songById(sid)||{}).key,evId:p.evId}; render(); },50); } }; })();
+/* prévia da grade já aberta na importação */
+(function(){ const _ip=impPreview; impPreview=function(){ return _ip().replace('<details class="leit"><summary><b>Prévia da grade</b>','<details class="leit" open><summary><b>Prévia da grade</b>'); }; })();
 try{ render(); }catch(e){}
 
 </script>
