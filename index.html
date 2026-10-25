@@ -742,6 +742,10 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .sheets .sheetbox{border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:10px 0;overflow:hidden} .sbh{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap} .sbh small{color:var(--muted)} .sheetview{background:#fff;padding:6px} .sheetview img,.sheetview canvas{display:block;width:100%;height:auto;margin:0 auto 6px}
 .scard2 .tgs{flex-wrap:wrap} .scard2 .ttl{min-width:0;overflow:hidden}
 .capobar{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center} .capobar select{width:auto;min-height:34px;padding:2px 8px;font-size:14px} .capobar small{color:var(--muted)}
+@media (max-width:640px){
+  .scard2{display:grid!important;grid-template-columns:60px minmax(0,1fr) auto;grid-template-areas:"back back acts" "tile ttl ttl";column-gap:12px;row-gap:8px;align-items:start}
+  .scard2>.back{grid-area:back;order:0;justify-self:start;min-width:0;max-width:100%} .scard2>.hacts{grid-area:acts;order:0;justify-content:flex-end;flex-wrap:wrap} .scard2>.tile{grid-area:tile} .scard2>.ttl{grid-area:ttl;min-width:0}
+}
 </style>
 </head>
 <body>
@@ -4174,7 +4178,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='45 · 24/10/2026';
+var APP_VERSION='46 · 24/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
