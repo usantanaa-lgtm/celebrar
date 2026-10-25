@@ -746,6 +746,29 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
   .scard2{display:grid!important;grid-template-columns:60px minmax(0,1fr) auto;grid-template-areas:"back back acts" "tile ttl ttl";column-gap:12px;row-gap:8px;align-items:start}
   .scard2>.back{grid-area:back;order:0;justify-self:start;min-width:0;max-width:100%} .scard2>.hacts{grid-area:acts;order:0;justify-content:flex-end;flex-wrap:wrap} .scard2>.tile{grid-area:tile} .scard2>.ttl{grid-area:ttl;min-width:0}
 }
+
+/* sugestões de canto */
+.sgcta{display:flex;gap:12px;align-items:center;width:100%;text-align:left;margin:10px 0;padding:12px 14px;border-radius:14px;border:1px solid var(--line);border-left:4px solid var(--gold);background:var(--surface)}
+.sgcta>span:first-child{font-size:22px} .sgcta>span:nth-child(2){flex:1;display:flex;flex-direction:column} .sgcta small{color:var(--muted)}
+.sgtop{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0 14px;display:flex;flex-direction:column;gap:8px}
+.sgtop .sgt{background:var(--surface2);color:var(--text);font-size:12px;margin:2px}
+.sgmom{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:0 0 12px}
+.sgmom h3{margin:2px 0 8px;font-size:13px;letter-spacing:.8px;text-transform:uppercase;color:var(--gold)}
+.sgrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)} .sgmom h3+.sgrow,.sgmom .hint+.sgrow,.sgsal+.sgrow{border-top:0}
+.sgrow .sgtx{flex:1;min-width:0;display:flex;flex-direction:column;text-align:left;background:none;border:0;padding:0;min-height:0;color:var(--text)}
+.sgrow .sgtx b{font-weight:600} .sgrow .sgtx small{color:var(--muted);font-size:12px}
+.sgrow.mine .sgtx>b{color:var(--accent)} .sgok{color:var(--gold);font-weight:600}
+.sgl{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.sglink{font-size:12px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:var(--surface2);color:var(--text);text-decoration:none;white-space:nowrap;min-height:0}
+.sglink.yt{color:#e5484d} 
+.sgchk{width:34px;height:34px;min-height:34px;flex:0 0 34px;border-radius:50%;padding:0;font-size:16px;border:1px solid var(--line);background:var(--surface2)}
+.sgchk.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.sgsal{display:flex;flex-direction:column;gap:4px;padding:4px 0 8px} .sgsal small{color:var(--muted)} .sgsal b{font-family:var(--serif);font-size:17px} .sgsal .sglink{align-self:flex-start;display:inline-block;margin-right:6px}
+.sgsal{flex-direction:row;flex-wrap:wrap;align-items:center;flex:1;min-width:0} .sgsal small,.sgsal b{flex-basis:100%}
+.sgfoot{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom));display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:10px 0 20px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.sgfoot button{white-space:nowrap} .sgfoot span:first-child{white-space:nowrap;font-size:14px;color:var(--muted)} .sgfoot.on span:first-child{color:var(--text);font-weight:600}
+@media (min-width:900px){ .sgfoot{bottom:12px} }
+@media (max-width:640px){ .sgrow{flex-wrap:wrap} .sgl{flex-basis:100%;justify-content:flex-start;padding-left:44px} }
 </style>
 </head>
 <body>
@@ -3128,7 +3151,7 @@ function viewArrLib(){
 
 function render(){
   const th=({light:'claro',dark:'escuro'})[db.prefs.theme]||db.prefs.theme; if(th) document.documentElement.dataset.theme=th; else delete document.documentElement.dataset.theme;
-  const V={home:viewHome,events:viewEvents,event:viewEvent,song:viewSong,lib:viewLib,lit:viewLit,cal:viewCal,import:viewImport,text:viewText,pray:viewPray,reps:viewReps,arrlib:viewArrLib,dict:viewDict,biblio:viewBiblio,doc:viewDoc,roteiro:viewRot};
+  const V={home:viewHome,events:viewEvents,event:viewEvent,song:viewSong,lib:viewLib,lit:viewLit,cal:viewCal,import:viewImport,text:viewText,pray:viewPray,reps:viewReps,arrlib:viewArrLib,dict:viewDict,biblio:viewBiblio,doc:viewDoc,roteiro:viewRot,sug:viewSug};
   if(S.view==='song'&&wide()&&S.ctx!=null&&S.evId){ S.view='event'; }
   const {L}=litNow(); document.documentElement.style.setProperty('--lit',L.cor==='branco'?'#b8892b':COR[L.cor]);
   if(S.stage){ document.body.className='stage'; document.getElementById('app').innerHTML=`<main class="stagewrap">${viewStage()}</main>`+modalHtml(); return; }
@@ -4178,7 +4201,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='46 · 24/10/2026';
+var APP_VERSION='47 · 25/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4509,6 +4532,226 @@ document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); 
 },true);
 /* na Biblioteca, partitura mostra a música e abre por ela */
 (function(){ const _vb=viewBiblio; viewBiblio=function(){ let h=_vb(); (db.library||[]).filter(x=>x.songId).forEach(x=>{ const s=songById(x.songId); if(s) h=h.replace(`data-act="docOpen" data-id="${x.id}"><span class="bki">`,`data-act="docOpen" data-id="${x.id}"><span class="bki" title="${esc(s.title)}">`); }); return h; }; })();
+try{ render(); }catch(e){}
+
+/* ===================== Sugestões de canto para o dia (pelas leituras e pelo tempo litúrgico) ===================== */
+var SUG_MOMS=[['E','Entrada'],['P','Ato penitencial'],['G','Glória'],['S','Salmo'],['A','Aclamação'],['O','Ofertório'],['T','Santo'],['C','Cordeiro'],['M','Comunhão'],['F','Final']];
+/* catálogo de cantos conhecidos: [título, autor, momentos, temas, tempos (vazio = qualquer)] */
+var SUG_CAT=[
+ ['A ti, meu Deus','Frei Fabreti','EO','oracao,fe',''],
+ ['Te amarei, Senhor','','EM','amor,seguimento',''],
+ ['Senhor, quem entrará','','E','alegria',''],
+ ['Ó Pai, somos nós o povo eleito','','E','igreja,palavra',''],
+ ['Eis-me aqui, Senhor','','EO','seguimento,missao,entrega',''],
+ ['Toda a Bíblia é comunicação','','E','palavra',''],
+ ['Momento novo','','EF','missao,igreja,reino,pobres',''],
+ ['Indo e vindo, trevas e luz','','EM','gratidao,fe,luz',''],
+ ['Pelos prados e campinas','','EM','pastor,fe',''],
+ ['Ó vem, ó vem, Emanuel','','E','vigilancia','adv'],
+ ['Preparai o caminho do Senhor','','EP','conversao,vigilancia','adv'],
+ ['Cristãos, vinde todos (Adeste Fideles)','','EF','alegria','nat'],
+ ['Noite feliz','','MF','paz','nat'],
+ ['Eis o tempo de conversão','','EP','conversao,perdao','qua'],
+ ['Senhor, eis aqui o teu povo','','E','conversao,perdao','qua'],
+ ['Hosana ao Filho de Davi','','E','reino,alegria','qua'],
+ ['O Senhor ressurgiu, aleluia','','EF','ressurreicao,alegria','pas'],
+ ['Cristo ressuscitou, aleluia','','EF','ressurreicao,alegria','pas'],
+ ['A nós descei, divina luz','','EM','espirito,luz','pas'],
+ ['Envia teu Espírito, Senhor','','EM','espirito,criacao','pas'],
+ ['Senhor, que viestes salvar os corações arrependidos','','P','perdao,conversao',''],
+ ['Kyrie eleison','','P','perdao',''],
+ ['Perdão, Senhor','','P','perdao,conversao',''],
+ ['Senhor, tende piedade de nós','','P','perdao',''],
+ ['Glória a Deus nas alturas','','G','alegria,paz',''],
+ ['A vossa palavra, Senhor','','A','palavra',''],
+ ['Aleluia, a minha alma abrirei','','A','palavra,alegria,aleluia',''],
+ ['Louvor e glória a ti, Senhor','','A','palavra','qua'],
+ ['Sabes, Senhor','','O','entrega,partilha',''],
+ ['De mãos estendidas','','O','entrega,gratidao',''],
+ ['Muitos grãos de trigo','','O','pao,igreja,partilha',''],
+ ['Bendito sejas, Senhor, Deus do universo','','O','gratidao,pao,criacao',''],
+ ['A mesa santa que preparamos','','O','partilha,pao',''],
+ ['Tudo é do Pai','Frei Fabreti','OF','alegria,gratidao',''],
+ ['Seu nome é Jesus Cristo','','OM','pobres,proximo,amor',''],
+ ['Santo','','T','alegria',''],
+ ['Cordeiro de Deus','','C','paz,perdao',''],
+ ['Eu quis comer esta ceia agora','','M','pao,amor,cruz',''],
+ ['Prova de amor maior não há','','M','amor,proximo,cruz',''],
+ ['Amar como Jesus amou','Pe. Zezinho','MF','amor,proximo',''],
+ ['O pão da vida, a comunhão','','M','pao,igreja,proximo',''],
+ ['Eu vim para que todos tenham vida','','MF','pobres,pastor',''],
+ ['Os cristãos tinham tudo em comum','','MO','partilha,igreja,proximo',''],
+ ['Quem nos separará','','M','amor,fe',''],
+ ['Tu te abeiraste da praia (A barca)','Cesáreo Gabaráin','MF','seguimento,missao',''],
+ ['Ninguém te ama como eu','Martín Valverde','M','amor,fe',''],
+ ['Noites traiçoeiras','','M','fe,forca',''],
+ ['Onde o amor e a caridade (Ubi caritas)','','MO','amor,proximo,igreja',''],
+ ['Coração Santo','','MF','amor',''],
+ ['Tão sublime sacramento','','M','pao,adoracao',''],
+ ['Um certo galileu','Pe. Zezinho','MF','seguimento,amor',''],
+ ['Oração pela família','Pe. Zezinho','MF','familia,amor',''],
+ ['Maria de Nazaré','Pe. Zezinho','F','maria',''],
+ ['Pelas estradas da vida (Santa Maria do caminho)','','F','maria,seguimento',''],
+ ['Imaculada, Maria de Deus','','F','maria',''],
+ ['Mãe do céu morena','','F','maria',''],
+ ['Viva a Mãe de Deus e nossa','','F','maria',''],
+ ['A treze de maio','','F','maria',''],
+ ['Utopia','Pe. Zezinho','F','paz,reino,vigilancia,pobres',''],
+ ['Vai, vai, missionário do Senhor','','F','missao',''],
+ ['Obrigado, Senhor','','F','gratidao','']
+];
+/* temas: palavras que aparecem nas leituras (sem acento, minúsculas) */
+var SUG_TEMAS={
+ amor:['amor',/\bam(or|ar|a|as|o|ou|ei|amos|ai|ado|ados|areis|aras)\b|caridade|ama-l/],
+ proximo:['próximo',/proximo|irmaos?\b|como a ti mesmo/],
+ pobres:['pobres e justiça',/pobre|orfao|orfaos|viuva|estrangeir|oprimid|justica|fome|faminto|necessitad|indigente/],
+ perdao:['perdão',/perdo|perdao|pecad|misericord|piedade|culpa/],
+ conversao:['conversão',/convert|arrepend|penitencia|volta(i|r) para|idolos/],
+ pao:['Eucaristia',/\bpao\b|\bpaes\b|ceia|eucarist|\bmana\b|comer|corpo e (o )?sangue|calice/],
+ pastor:['bom pastor',/pastor|ovelha|rebanho|aprisco/],
+ luz:['luz',/\bluz\b|trevas|cego|ilumin|lampada/],
+ agua:['água e batismo',/\bagua|\bsede\b|fonte|batism/],
+ missao:['missão',/envi(a|o|ou|ar|ei)|anunci|discipul|mission|nacoes|evangeliz|testemunh/],
+ seguimento:['seguir Jesus',/segue-me|segui-lo|seguiram|siga|chamou|chamad|vocac|eis-me|pescador/],
+ reino:['Reino de Deus',/reino|semente|joio|colheita|vinha|fermento|mostarda|tesouro|perola|\bmesse/],
+ fe:['fé e confiança',/\bfe\b|\bcrer|creia|creu|cre\b|confia|esperanca/],
+ vigilancia:['vigilância e espera',/vigi|vinda|noivo|azeite|talentos?\b|fim dos tempos|dia do senhor|aguard/],
+ cruz:['cruz',/\bcruz|sofr|paixao/],
+ ressurreicao:['ressurreição',/ressusc|ressurrei|vida eterna|sepulcro|tumulo/],
+ espirito:['Espírito Santo',/espirito santo|espirito de deus|o espirito/],
+ maria:['Maria',/maria|virgem/],
+ alegria:['louvor e alegria',/alegr|exult|jubilo|louv|cantai/],
+ paz:['paz',/\bpaz\b/],
+ oracao:['oração',/\bora(i|r|cao|ndo)?\b|pedi|clama|suplic/],
+ servico:['serviço',/servi|lavar os pes|humild|ultimo/],
+ gratidao:['gratidão',/gracas|agradec/],
+ palavra:['Palavra de Deus',/palavra|escritura|mandamento|\blei\b|profeta/],
+ forca:['Deus, nossa força',/forca|rochedo|refugio|fortaleza|libertador/],
+ familia:['família',/famili|esposo|marido|mulher|casamento|nupcias/],
+ partilha:['partilha',/partilh|repart|em comum|dividir/],
+ entrega:['entrega',/entreg|oferec|oferta|sacrificio/],
+ igreja:['comunidade',/igreja|comunidade|povo de deus|reunid/],
+ criacao:['criação',/criacao|criou|terra|ceus/]
+};
+function sugTempo(L){ return ({'Advento':'adv','Natal':'nat','Quaresma':'qua','Semana Santa':'qua','Páscoa':'pas','Pentecostes':'pas'})[L.tempo]||'tc'; }
+function sugNorm(t){ return String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+/* lê as leituras do dia e dá peso a cada tema */
+function sugTemas(iso){
+  const L=litInfo(iso), A=leitCache[iso]; const W={};
+  const add=(txt,w)=>{ const t=sugNorm(txt); if(!t) return; for(const k in SUG_TEMAS){ const m=t.match(new RegExp(SUG_TEMAS[k][1].source,'g')); if(m) W[k]=(W[k]||0)+Math.min(m.length,4)*w*(k==='palavra'?0.4:1); } };
+  if(A&&A.leituras){ const l=A.leituras, o=A.antifonas||{}; const tx=a=>(a||[]).slice(0,1).map(x=>(x.titulo||'')+' '+(x.texto||'')).join(' ');
+    add(tx(l.evangelho),3); add(tx(l.primeiraLeitura),2); add(tx(l.salmo),1.5); add(((l.salmo||[])[0]||{}).refrao,3); add(tx(l.segundaLeitura),1); add((o.entrada||'')+' '+(o.comunhao||''),1); }
+  const ttl=(L.titulo||'')+' '+(L.festa||'');
+  if(/Maria|Nossa Senhora|Aparecida|Assun|Imaculada/.test(ttl)) W.maria=(W.maria||0)+12;
+  if(/Corpus|Corpo e Sangue/.test(ttl)) W.pao=(W.pao||0)+12;
+  if(/Rei do Universo/.test(ttl)) W.reino=(W.reino||0)+10;
+  if(/Pentecostes/.test(ttl)) W.espirito=(W.espirito||0)+12;
+  if(/Bom Pastor/.test(ttl)||(L.tempo==='Páscoa'&&/4º Domingo/.test(ttl))) W.pastor=(W.pastor||0)+8;
+  const T=sugTempo(L); if(T==='qua'){ W.conversao=(W.conversao||0)+4; W.perdao=(W.perdao||0)+3; } if(T==='adv') W.vigilancia=(W.vigilancia||0)+5; if(T==='pas') W.ressurreicao=(W.ressurreicao||0)+5;
+  const top=Object.entries(W).filter(x=>x[1]>=2).sort((a,b)=>b[1]-a[1]);
+  return {W,top:top.slice(0,6).map(x=>x[0]),hasReadings:!!(A&&A.leituras),L,T};
+}
+function sugHash(s){ let h=0; for(const c of s) h=(h*31+c.charCodeAt(0))|0; return Math.abs(h); }
+function sugScoreTags(tags,W){ return tags.reduce((a,t)=>a+(W[t]||0),0); }
+function sugCatFor(code,ctx,iso){
+  const {W,T}=ctx;
+  return SUG_CAT.map((r,i)=>({i,t:r[0],a:r[1],m:r[2],tags:r[3].split(','),tp:r[4]?r[4].split(','):[]}))
+    .filter(r=>r.m.includes(code)&&(!r.tp.length||r.tp.includes(T)))
+    .filter(r=>!(T==='qua'&&r.tags.includes('aleluia')))
+    .map(r=>({...r,score:sugScoreTags(r.tags,W)+(r.tp.length?6:0)+(sugHash(iso+r.t)%100)/100}))
+    .sort((a,b)=>b.score-a.score);
+}
+var SUG_ALIAS={'Entrada':/^(entrada|acolhida|canto de entrada)$/,'Ato penitencial':/^(ato penitencial|perdao|kyrie)$/,'Glória':/^gloria$/,'Salmo':/^salmo/,'Aclamação':/^(aclamacao|aleluia)/,'Ofertório':/^(ofertorio|oferendas|preparacao das oferendas)$/,'Santo':/^santo$/,'Cordeiro':/^(cordeiro|cordeiro de deus|agnus dei)$/,'Comunhão':/^(comunhao|pos comunhao|pos-comunhao)$/,'Final':/^(final|envio|canto final|saida)$/};
+function sugMomMatch(s,name){ const rx=SUG_ALIAS[name]; return (s.momentos||[]).some(x=>rx.test(sugNorm(x).trim())); }
+function sugAcervo(name,ctx,iso){
+  const {W}=ctx;
+  return db.songs.filter(s=>s.title&&sugMomMatch(s,name)).map(s=>{ const tt=sugNorm(s.title+' '+(s.trecho||'')), ly=sugNorm(s.cifra?lyricsOf(s):'');
+      let sc=0; for(const k in W){ const re=new RegExp(SUG_TEMAS[k][1].source,'g'); const a=(tt.match(re)||[]).length, b=(ly.match(re)||[]).length; sc+=(Math.min(a,2)*3+Math.min(b,2))*W[k]/10; }
+      return {s,score:sc,r:sugHash(iso+s.id)%1000}; }).sort((a,b)=>b.score-a.score||a.r-b.r);
+}
+function sugYT(q){ return 'https://www.youtube.com/results?search_query='+encodeURIComponent(q); }
+function sugCC(q){ return 'https://www.cifraclub.com.br/?q='+encodeURIComponent(q); }
+function sugLinks(q){ return `<a class="sglink yt" href="${sugYT(q)}" target="_blank" rel="noopener">▶ YouTube</a><a class="sglink cc" href="${sugCC(q)}" target="_blank" rel="noopener">♪ Cifra Club</a>`; }
+function sugSel(){ S.sug=S.sug||{}; S.sug.sel=S.sug.sel||{}; return S.sug.sel; }
+function sugChk(key,mom){ const on=!!sugSel()[key]; return `<button class="sgchk ${on?'on':''}" data-act="sugTog" data-k="${esc(key)}" data-m="${esc(mom)}" aria-label="Escolher">${on?'✓':'＋'}</button>`; }
+function viewSug(){
+  const iso=(S.sug&&S.sug.date)||today(); const ctx=sugTemas(iso); const L=ctx.L; const A=leitCache[iso];
+  const ev=S.sug&&S.sug.evId&&evById(S.sug.evId);
+  const noGloria=(ctx.T==='adv'||ctx.T==='qua')&&!/Solenidade|Natal|Imaculada|José|Anunciação/.test((L.titulo||'')+(L.festa||''));
+  const nSel=Object.keys(sugSel()).length;
+  const sal=A&&A.leituras&&(A.leituras.salmo||[])[0]; const evg=A&&A.leituras&&(A.leituras.evangelho||[])[0];
+  const salNum=sal&&((sal.referencia||'').match(/(\d+)/)||[])[1];
+  let h=`${heroHtml('Sugestões de canto',litLabel(L)+' · '+fmtDate(iso))}
+    <div class="bar">${ev?`<button class="ghost" data-act="openEv" data-id="${ev.id}">‹ ${esc(ev.name)}</button>`:`<button class="ghost" data-act="nav" data-v="lit">‹ Liturgia</button>`}<span class="sp"></span><input type="date" value="${iso}" data-act2="sugDate" class="dsel"></div>
+    <div class="sgtop"><div><b>Temas do dia</b> ${ctx.top.length?ctx.top.map(k=>`<span class="tag sgt">${esc(SUG_TEMAS[k][0])}</span>`).join(' '):'<span class="hint">—</span>'}</div>
+      <div class="hint">${ctx.hasReadings?'Escolhidos a partir das leituras do dia e do tempo litúrgico ('+esc(L.tempo)+').':'As leituras deste dia ainda não carregaram (sem internet?) — por enquanto, as sugestões seguem só o tempo litúrgico.'} Primeiro aparecem as músicas do seu acervo; depois, cantos conhecidos com link para ouvir e achar a cifra. Toque em ＋ para escolher e depois ponha tudo num repertório. Confira sempre com a equipe de liturgia.</div></div>`;
+  for(const [code,name] of SUG_MOMS){
+    let body='';
+    if(code==='G'&&noGloria){ h+=`<div class="sgmom"><h3>${name}</h3><div class="hint">Neste tempo (${esc(L.tempo)}) não se canta o Glória aos domingos.</div></div>`; continue; }
+    if(code==='S'){
+      body+= sal?`<div class="sgrow">${sugChk('p:'+iso,name)}<div class="sgsal"><small>${esc(sal.referencia||'')}</small><b>R. ${esc(sal.refrao||'')}</b>${sugLinks('Salmo '+(salNum||'')+' '+(sal.refrao||'')).replace('class="sglink yt"','class="sglink yt"')}</div></div>`:`<div class="hint">O refrão do salmo aparece aqui quando as leituras do dia carregarem.</div>`;
+    }
+    if(code==='A'&&evg) body+=`<div class="hint" style="margin:2px 0 6px">Evangelho: <b>${esc(evg.referencia||'')}</b> — o versículo da aclamação está no Lecionário.${ctx.T==='qua'?' Na Quaresma, sem Aleluia.':''}</div>`;
+    const ord=['P','G','T','C'].includes(code); let all=sugAcervo(name,ctx,iso); if(code==='S') all=salNum?all.filter(x=>new RegExp('\\b'+salNum+'\\b').test(x.s.title+' '+(x.s.artist||''))).map(x=>({...x,score:1})):[]; const good=all.filter(x=>x.score>=0.8).slice(0,3);
+    const mine=good.concat(all.filter(x=>x.score<0.8).slice(0,Math.max(0,(ord?3:2)-good.length)));
+    const mineIds=new Set(mine.map(x=>sugNorm(x.s.title)));
+    const libT=new Set(db.songs.map(s=>sugNorm(s.title)));
+    body+=mine.map(({s,score})=>`<div class="sgrow mine">${sugChk('s:'+s.id,name)}<button class="sgtx" data-act="openSong" data-id="${s.id}"><b>${esc(s.title)}</b><small>${esc(s.artist||'')}${s.key?' · Tom '+esc(s.key):''} · <i>no seu acervo</i>${score>=0.8?' · <b class="sgok">combina com as leituras</b>':''}</small></button><span class="sgl">${s.youtube&&/^https?:/.test(s.youtube)?`<a class="sglink yt" href="${esc(s.youtube)}" target="_blank" rel="noopener">▶</a>`:''}<button class="sglink" data-act="openSong" data-id="${s.id}">Abrir</button></span></div>`).join('');
+    const cat=sugCatFor(code,ctx,iso).filter(r=>!mineIds.has(sugNorm(r.t))).slice(0,ord?1:(code==='E'||code==='M'||code==='F'||code==='O'?4:2));
+    body+=cat.map(r=>{ const q=r.t.replace(/\s*\(.*\)$/,'')+(r.a?' '+r.a:'')+(['G','T','C','P'].includes(code)?' missa':''); const has=libT.has(sugNorm(r.t));
+      const why=r.tags.filter(t=>(ctx.W[t]||0)>=2).map(t=>SUG_TEMAS[t]&&SUG_TEMAS[t][0]).filter(Boolean).slice(0,2);
+      return `<div class="sgrow">${sugChk('c:'+r.i,name)}<div class="sgtx"><b>${esc(r.t)}</b><small>${esc(r.a||'')}${r.a&&why.length?' · ':''}${why.length?esc(why.join(', ')):''}${has?' · já no acervo':''}</small></div><span class="sgl">${has?`<button class="sglink" data-act="openSong" data-id="${db.songs.find(x=>sugNorm(x.title)===sugNorm(r.t)).id}">Abrir</button>`:''}${sugLinks(q)}</span></div>`; }).join('');
+    h+=`<div class="sgmom"><h3>${name}</h3>${body||'<div class="hint">Sem sugestões.</div>'}</div>`;
+  }
+  if(nSel) h+=`<div class="sgfoot on"><span>${nSel} escolhida${nSel>1?'s':''}</span><span class="sp"></span><button class="ghost" data-act="sugClear">Limpar</button><button class="pri" data-act="sugPut">${ev?'Pôr em '+esc(ev.name):'Pôr num repertório'}</button></div>`;
+  return h;
+}
+/* coloca as escolhidas num repertório (cria no acervo as que ainda não existem) */
+function sugBlockFor(ev,mom){
+  const n=sugNorm(mom); const rx=({'Final':/final|envio|saida/,'Ato penitencial':/penitencial|perdao/,'Aclamação':/aclama|aleluia|evangelho/,'Comunhão':/comunhao/,'Ofertório':/ofert|preparacao|oferendas/})[mom];
+  let b=ev.blocks.find(x=>rx?rx.test(sugNorm(x.name)):sugNorm(x.name).includes(n));
+  if(!b){ b={id:uid(),name:mom,items:[]}; const order=SUG_MOMS.map(x=>x[1]); const i=order.indexOf(mom);
+    let pos=ev.blocks.length; for(let j=0;j<ev.blocks.length;j++){ const k=order.findIndex(o=>sugNorm(ev.blocks[j].name).includes(sugNorm(o))); if(k>i){ pos=j; break; } } ev.blocks.splice(pos,0,b); }
+  return b;
+}
+function sugApply(ev){
+  const sel=sugSel(); let n=0, created=0;
+  for(const k in sel){ const mom=sel[k]; let sid=null;
+    if(k.startsWith('s:')) sid=k.slice(2);
+    else if(k.startsWith('p:')){ const A=leitCache[k.slice(2)]; const sl=A&&A.leituras&&(A.leituras.salmo||[])[0]; if(!sl) continue; const num=((sl.referencia||'').match(/\d+(\(\d+\))?/)||[''])[0];
+      const title='Salmo '+num+' — '+(sl.refrao||'').replace(/\.$/,''); const ex=db.songs.find(s=>sugNorm(s.title)===sugNorm(title));
+      if(ex) sid=ex.id; else { const s={...blankSong(),title,artist:'Salmo responsorial',momentos:['Salmo'],trecho:sl.refrao||'',youtube:sugYT('Salmo '+num+' '+(sl.refrao||'')),notes:(sl.referencia||'')+'\n\nR. '+(sl.refrao||'')}; db.songs.push(s); sid=s.id; created++; } }
+    else { const r=SUG_CAT[+k.slice(2)]; if(!r) continue; const ex=db.songs.find(s=>sugNorm(s.title)===sugNorm(r[0]));
+      if(ex) sid=ex.id; else { const q=r[0].replace(/\s*\(.*\)$/,'')+(r[1]?' '+r[1]:''); const s={...blankSong(),title:r[0],artist:r[1]||'',momentos:[mom],link:sugCC(q),youtube:sugYT(q),notes:'Sugestão do Celebrar — cole a cifra quando tiver.'}; db.songs.push(s); sid=s.id; created++; } }
+    const b=sugBlockFor(ev,mom); if(b.items.some(it=>it.songId===sid)) continue; const s=songById(sid);
+    b.items.push({id:uid(),songId:sid,key:(s&&s.key)||'',note:''}); n++; }
+  S.sug.sel={}; save(); return {n,created};
+}
+function sugEvModal(){
+  const iso=(S.sug&&S.sug.date)||today(); const t0=today();
+  const evs=db.events.filter(e=>e.date===iso).concat(db.events.filter(e=>e.date!==iso&&(e.date||'')>=t0).sort((a,b)=>(a.date||'').localeCompare(b.date||'')).slice(0,8));
+  return `<div class="modal"><div class="box"><h3>Em qual repertório?</h3><div class="slist">${evs.map(e=>`<button class="srow" data-act="sugToEv" data-id="${e.id}"><span class="tx"><b>${esc(e.name)}</b><small>${e.date?fmtDate(e.date):'sem data'}${e.date===iso?' · deste dia':''}</small></span><span>›</span></button>`).join('')||'<div class="empty">Nenhum repertório para esta data.</div>'}</div>
+    <div class="bar end"><button data-act="sugNewEv">＋ Criar repertório de ${fmtShort(iso)}</button><span class="sp"></span><button data-act="closeModal">Cancelar</button></div></div></div>`;
+}
+(function(){ const _m=modalHtml; modalHtml=function(){ if(S.modal&&S.modal.t==='sugEv') return sugEvModal(); return _m(); }; })();
+(function(){ const _ct=curTab; curTab=function(){ return S.view==='sug'?((S.sug&&S.sug.evId)?'events':'lit'):_ct(); }; })();
+/* entradas: Liturgia do dia e evento */
+(function(){ const _vl=viewLit; viewLit=function(){ const iso=S.litDate||today();
+  return _vl().replace(`<div data-leit="${iso}"`,`<button class="sgcta" data-act="sugOpen" data-d="${iso}"><span>🎵</span><span><b>Sugestões de canto para este dia</b><small>Entrada, ato penitencial, salmo, ofertório, comunhão, final… ligadas às leituras</small></span><span>›</span></button><div data-leit="${iso}"`); }; })();
+(function(){ const _ve=viewEvent; viewEvent=function(){ const ev=evById(S.evId); return _ve().replace('<button data-act="shareEv">Compartilhar</button>',`<button data-act="sugOpen" data-d="${ev&&ev.date||''}" data-ev="${ev?ev.id:''}">🎵 Sugestões</button><button data-act="shareEv">Compartilhar</button>`); }; })();
+(function(){ const _r=render; render=function(){ _r(); if(S.view==='sug'){ const iso=(S.sug&&S.sug.date)||today(); if(!leitCache[iso]&&leitState[iso]!=='loading'&&leitState[iso]!=='erro'){ loadLeituras(iso).then(()=>{ if(S.view==='sug') rerender(); }); } } }; })();
+document.addEventListener('change',e=>{ if(e.target.dataset.act2==='sugDate'&&e.target.value){ S.sug=S.sug||{}; S.sug.date=e.target.value; S.sug.sel={}; render(); } },true);
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
+  const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
+  if(a==='sugOpen'){ stop(); const d=el.dataset.d||today(); S.sug={date:d,evId:el.dataset.ev||null,sel:{}}; go({view:'sug'}); return; }
+  if(a==='sugTog'){ stop(); const sel=sugSel(); const k=el.dataset.k; if(sel[k]) delete sel[k]; else sel[k]=el.dataset.m; rerender(); return; }
+  if(a==='sugClear'){ stop(); S.sug.sel={}; rerender(); return; }
+  if(a==='sugPut'){ stop(); const ev=S.sug.evId&&evById(S.sug.evId); if(ev){ const r=sugApply(ev); toast(`${r.n} música${r.n===1?'':'s'} em ${ev.name}${r.created?` · ${r.created} nova${r.created>1?'s':''} no acervo`:''}`); go({view:'event',evId:ev.id,songId:null,ctx:null}); } else { S.modal={t:'sugEv'}; render(); } return; }
+  if(a==='sugToEv'){ stop(); const ev=evById(el.dataset.id); if(!ev) return; S.modal=null; const r=sugApply(ev); toast(`${r.n} música${r.n===1?'':'s'} em ${ev.name}${r.created?` · ${r.created} nova${r.created>1?'s':''} no acervo`:''}`); go({view:'event',evId:ev.id,songId:null,ctx:null}); return; }
+  if(a==='sugNewEv'){ stop(); const iso=S.sug.date||today(); const L=litInfo(iso); const ty=evTypes()[0]||{name:'Missa',blocks:SUG_MOMS.map(x=>x[1])};
+    const ev={id:uid(),name:L.titulo||ty.name,type:ty.name,date:iso,time:'',place:'',with:'',notes:'',blocks:(ty.blocks||[]).map(n=>({id:uid(),name:n,items:[]}))};
+    db.events.push(ev); S.modal=null; const r=sugApply(ev); toast(`Repertório criado com ${r.n} música${r.n===1?'':'s'}`); go({view:'event',evId:ev.id,songId:null,ctx:null}); return; }
+},true);
 try{ render(); }catch(e){}
 
 </script>
