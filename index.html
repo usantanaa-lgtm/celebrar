@@ -774,6 +774,11 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 @keyframes nudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 
 .liturgic .resp.cont{padding-left:1.45em;display:inline-block}
+
+.lpcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--lit);border-radius:14px;padding:12px 14px;margin:10px 0;display:flex;flex-direction:column;gap:6px}
+.lprow{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap} .lprow>span{color:var(--muted);font-size:13px;min-width:130px}
+.lplink{background:none;border:0;padding:0;min-height:0;color:var(--accent);font-weight:600;text-align:left;text-decoration:underline;text-underline-offset:3px}
+.rsel{width:100%;margin-top:6px;font-size:13px}
 </style>
 </head>
 <body>
@@ -4211,7 +4216,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='48 · 31/10/2026';
+var APP_VERSION='49 · 31/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4788,6 +4793,80 @@ function txOrd(t){ if(t.ord!=null) return t.ord; const m=String(t.title||'').mat
 (function(){ const _a=allTexts; allTexts=function(){ const r=_a(); const groups={}; r.forEach(x=>(groups[x.cat]=groups[x.cat]||[]).push(x));
   for(const c in groups){ const g=groups[c]; if(g.some(x=>txOrd(x)!=null)){ g.forEach((x,i)=>x._i=i); g.sort((a,b)=>((txOrd(a)??1000)-(txOrd(b)??1000))||a._i-b._i); } }
   return r.map(x=>x.cat).filter((c,i,a)=>a.indexOf(c)===i).flatMap(c=>groups[c]); }; })();
+
+/* ===================== Prefácio e Oração Eucarística do dia (ligados à liturgia) ===================== */
+
+function lpTexts(cat){ return allTexts().filter(t=>nrm(t.cat)===nrm(cat)); }
+function lpPrefs(){ return allTexts().filter(t=>/^prefacio/.test(nrm(t.title))); }
+function lpOEs(){ return allTexts().filter(t=>/^oracao eucaristica/.test(nrm(t.title))); }
+/* acha um prefácio pelo grupo ("da quaresma", "dos domingos do tempo comum"…) e número romano */
+function lpFind(group,num){ const g=nrm(group); const P=lpPrefs();
+  return P.find(t=>{ const n=nrm(t.title).split(' — ')[0].trim(); const m=n.match(/\s([ivx]+a?)$/); const base=m?n.slice(0,m.index):n; if(base!=='prefacio '+g) return false; if(!num) return true; return m&&m[1]===String(num).toLowerCase(); })||null; }
+/* lê o nome colado da liturgia: "Prefácio dos Domingos do Tempo Comum, IV" */
+function lpFromName(name){ const n=nrm(name).replace(/[,.;]/g,' ').replace(/\s+/g,' ').trim(); const m=n.match(/\b([ivx]+a?)\s*$/); const num=m?m[1]:null; const base=(m?n.slice(0,m.index):n).replace(/^prefacio\s*/,'').trim();
+  const P=lpPrefs(); let best=null,bs=0; for(const t of P){ const tn=nrm(t.title).split(' — ')[0].replace(/^prefacio\s*/,''); const tm=tn.match(/\s([ivx]+a?)$/); if(num&&(!tm||tm[1]!==num)) continue; const tb=tm?tn.slice(0,tm.index):tn;
+    const ws=base.split(' ').filter(w=>w.length>3); const sc=ws.filter(w=>tb.includes(w)).length/(ws.length||1); if(sc>bs){ bs=sc; best=t; } }
+  return bs>=0.5?best:null; }
+function lpRot(arr,k){ return arr[((k%arr.length)+arr.length)%arr.length]; }
+/* sugestão de prefácio para o dia */
+function prefFor(iso,X){
+  const L=litInfo(iso); const d=parseIso(iso); const md=iso.slice(5); const sun=L.dow===0; const t=(L.titulo||'')+' '+(L.festa||''); const wk=parseInt(L.semana)||1;
+  if(X&&X.prefacio){ const f=lpFromName(X.prefacio); if(f) return {t:f,why:'indicado na liturgia colada'}; }
+  const r=(g,n,why)=>{ const f=lpFind(g,n); return f?{t:f,why}:null; };
+  const own=why=>({t:null,why});
+  if(md==='11-02') return r('dos defuntos','i','Finados');
+  if(md==='11-01') return r('dos santos','i','Todos os Santos');
+  if(/Corpus|Corpo e Sangue/.test(t)) return r('da santissima eucaristia','i','Corpo e Sangue de Cristo');
+  if(/Pentecostes|Trindade|Rei do Universo|Sagrado Cora|Batismo do Senhor|Ramos|Transfigura|Santa Cruz|Apresenta|Anuncia/.test(t)) return own('a solenidade/festa tem prefácio próprio no Missal (no Próprio do dia)');
+  if(/Maria|Nossa Senhora|Imaculada|Assun/.test(t)) return r('da bem-aventurada virgem maria','i','festa de Nossa Senhora');
+  if(/Pedro e S|Apóstol/.test(t)) return r('dos apostolos','i','festa de Apóstolos');
+  switch(L.tempo){
+    case 'Advento': return d.getUTCMonth()===11&&d.getUTCDate()>=17?r('do advento','ii','Advento, de 17 a 24 de dezembro'):r('do advento','i','Advento, até 16 de dezembro');
+    case 'Natal': if(md==='12-25') return r('do natal do senhor','i','Natal do Senhor'); if(/Epifania/.test(t)) return r('da epifania do senhor',null,'Epifania'); return r('do natal do senhor',lpRot(['i','ii','iii'],d.getUTCDate()),'Tempo do Natal');
+    case 'Quaresma': if(sun) return own('os domingos da Quaresma têm prefácio próprio no Missal'); if(wk===5) return r('da paixao do senhor','i','5ª semana da Quaresma'); return r('da quaresma',lpRot(['i','ii','iii','iv'],d.getUTCDate()),'Quaresma');
+    case 'Semana Santa': return /Quinta-feira Santa/.test(t)?r('da santissima eucaristia','i','Ceia do Senhor'):r('da paixao do senhor','ii','Semana Santa');
+    case 'Páscoa': if(/Ascensão/.test(t)) return r('da ascensao do senhor','i','Ascensão'); if(/Oitava/.test(L.semana)) return r('da pascoa','i','Oitava da Páscoa');
+      if(wk>=6&&L.dow>=4||wk===7) { const f=lpFind('depois da ascensao do senhor'); if(f&&wk===7) return {t:f,why:'entre a Ascensão e Pentecostes'}; }
+      return r('da pascoa',lpRot(['i','ii','iii','iv','v'],wk-1),'Tempo Pascal');
+    case 'Pentecostes': return own('Pentecostes tem prefácio próprio no Missal');
+  }
+  if(sun) return r('dos domingos do tempo comum',lpRot(['i','ii','iii','iv','v','vi','vii','viii'],wk-1),'Domingo do Tempo Comum (pode-se usar qualquer um dos Domingos)');
+  return r('comum',lpRot(['i','ii','iii','iv','v','vi','vii','viii','ix'],d.getUTCDate()),'dia de semana do Tempo Comum');
+}
+function oeFor(iso){ const L=litInfo(iso); const P=lpOEs(); const pick=n=>P.find(t=>new RegExp('eucaristica '+n+'\\b').test(nrm(t.title)));
+  return L.dow===0||/Solenidade|Natal|Páscoa|Pentecostes|Ascensão|Corpus|Santíssim|Rei do Universo|Imaculada|Assunção|Todos os Santos|Aparecida/.test((L.titulo||'')+(L.festa||''))?(pick('iii')||P[0]):(pick('ii')||P[0]); }
+/* roteiro: usa o prefácio e a OE escolhidos (ou sugeridos) e deixa trocar */
+(function(){ const _sb=stepBody; stepBody=function(st,R,ev,printMode){
+  if(st.id!=='prefacio'&&st.id!=='oe') return _sb(st,R,ev,printMode);
+  const r=rotOf(ev); const iso=ev.date||today(); let h='';
+  if(st.id==='prefacio'){ const sug=prefFor(iso,R.api&&R.api.extra); const oe=r.oe?getText(r.oe):oeFor(iso); const fixed=oe&&/eucaristica (iv|v)\b/.test(nrm(oe.title));
+    const cur=r.pref?getText(r.pref):(sug&&sug.t); const P=lpPrefs();
+    if(fixed&&!r.pref) h+=`<div class="rref">A ${esc(oe.title)} tem prefácio próprio (já está no texto dela).</div>`;
+    else { h+=cur?`<details class="rdet" ${printMode==='full'?'open':''}><summary>${esc(cur.title)}</summary><div class="rtxt">${txHtml(cur.text)}</div></details>`:'';
+      if(!r.pref&&sug) h+=`<div class="hint" style="margin:2px 0">${sug.t?'Sugerido: ':''}${esc(sug.why)}</div>`;
+      if(!P.length) h+=`<div class="rmiss soft">Importe os prefácios do Missal para aparecerem aqui.</div>`; }
+    if(!printMode&&P.length) h+=`<select class="rsel" data-rotpref="${ev.id}"><option value="">${sug&&sug.t?'Automático — '+esc(sug.t.title.split(' — ')[0]):'Automático'}</option>${P.map(t=>`<option value="${t.id}" ${r.pref===t.id?'selected':''}>${esc(t.title)}</option>`).join('')}</select>`;
+    const X=R.api&&R.api.extra||{}; if(X.prefacio) h+=`<div class="rref">Liturgia colada: <b>${esc(X.prefacio)}</b>${X.oe?' · '+esc(X.oe):''}</div>`;
+    return h; }
+  const P=lpOEs(); const cur=r.oe?getText(r.oe):oeFor(iso);
+  h+=cur?`<details class="rdet" ${printMode==='full'?'open':''}><summary>${esc(cur.title)}</summary><div class="rtxt">${txHtml(cur.text)}</div></details>`:`<div class="rmiss soft">Importe as Orações Eucarísticas para aparecerem aqui.</div>`;
+  if(!printMode&&P.length>1) h+=`<select class="rsel" data-rotoe="${ev.id}"><option value="">Automático — ${esc((oeFor(iso)||{}).title||'')}</option>${P.map(t=>`<option value="${t.id}" ${r.oe===t.id?'selected':''}>${esc(t.title)}</option>`).join('')}</select>`;
+  return h; }; })();
+/* nome do passo do roteiro: separa prefácio da oração eucarística */
+ROT_MISSA.forEach(s=>{ if(s.id==='prefacio') s.t='Prefácio'; });
+document.addEventListener('change',e=>{ const t=e.target;
+  if(t.dataset.rotpref!=null){ const ev=evById(t.dataset.rotpref); if(ev){ rotOf(ev).pref=t.value||undefined; if(!t.value) delete rotOf(ev).pref; save(); rerender(); } }
+  if(t.dataset.rotoe!=null){ const ev=evById(t.dataset.rotoe); if(ev){ if(t.value) rotOf(ev).oe=t.value; else delete rotOf(ev).oe; save(); rerender(); } }
+},true);
+/* Liturgia do dia: mostra o prefácio e a OE sugeridos */
+(function(){ const _vl=viewLit; viewLit=function(){ let h=_vl(); const iso=S.litDate||today(); if(!lpPrefs().length&&!lpOEs().length) return h;
+  const s=prefFor(iso,null); const oe=oeFor(iso);
+  const card=`<div class="lpcard"><b>Na Missa deste dia</b>
+    <div class="lprow"><span>Prefácio</span>${s&&s.t?`<button class="lplink" data-act="txOpen" data-id="${s.t.id}">${esc(s.t.title)}</button>`:`<i>${esc(s?s.why:'—')}</i>`}</div>
+    ${s&&s.t?`<small class="hint">${esc(s.why)} · é uma sugestão: o padre pode escolher outro.</small>`:''}
+    ${oe?`<div class="lprow"><span>Oração Eucarística</span><button class="lplink" data-act="txOpen" data-id="${oe.id}">${esc(oe.title)}</button></div><small class="hint">A escolha é do padre — no roteiro do evento você pode trocar.</small>`:''}</div>`;
+  return h.replace('<div data-leit="',card+'<div data-leit="'); }; })();
+try{ render(); }catch(e){}
 
 </script>
 </body>
