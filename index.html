@@ -769,6 +769,11 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .sgfoot button{white-space:nowrap} .sgfoot span:first-child{white-space:nowrap;font-size:14px;color:var(--muted)} .sgfoot.on span:first-child{color:var(--text);font-weight:600}
 @media (min-width:900px){ .sgfoot{bottom:12px} }
 @media (max-width:640px){ .sgrow{flex-wrap:wrap} .sgl{flex-basis:100%;justify-content:flex-start;padding-left:44px} }
+
+.modal .box.nudge{animation:nudge .35s}
+@keyframes nudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+.liturgic .resp.cont{padding-left:1.45em;display:inline-block}
 </style>
 </head>
 <body>
@@ -1997,7 +2002,11 @@ function importIreal(src){
 function readFile(input,cb){ const f=input.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ cb(String(r.result)); input.value=''; }; r.readAsText(f); }
 
 document.addEventListener('click',e=>{
-  if(e.target.classList&&e.target.classList.contains('modal')){ S.modal=null; rerender(); return; }
+  if(e.target.classList&&e.target.classList.contains('modal')){
+    /* clicar fora só fecha janelas de escolha; telas de edição (com campos) só fecham em Salvar/Cancelar */
+    const down=window._mdT; const form=e.target.querySelector('input:not([type=checkbox]):not([type=radio]):not([type=search]),textarea');
+    if(down!==e.target||form){ if(form){ const b=e.target.querySelector('.box'); if(b){ b.classList.remove('nudge'); void b.offsetWidth; b.classList.add('nudge'); } } return; }
+    S.modal=null; rerender(); return; }
   const el=e.target.closest('[data-act]'); if(!el) return;
   const a=el.dataset.act; const ev=evById(S.evId);
   switch(a){
@@ -2129,6 +2138,7 @@ document.addEventListener('pointerdown',e=>{
   const n=document.querySelector(`.adder[data-bi="${bi}"]`); if(n) n.focus();
   toast(created?'Nova música criada — complete o tom depois':'Adicionada');
 });
+document.addEventListener('pointerdown',e=>{ window._mdT=e.target; },true);
 document.addEventListener('keydown',e=>{
   if(e.target.classList&&e.target.classList.contains('adder')&&e.key==='Enter'){ e.preventDefault(); const first=document.querySelector(`#sugg-${e.target.dataset.bi} [data-sugg]`); if(first) first.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})); }
   if(S.view==='event'||S.view==='song'){ if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||'')||S.modal) return;
@@ -4201,7 +4211,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='47 · 25/10/2026';
+var APP_VERSION='48 · 31/10/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4753,6 +4763,31 @@ document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); 
     db.events.push(ev); S.modal=null; const r=sugApply(ev); toast(`Repertório criado com ${r.n} música${r.n===1?'':'s'}`); go({view:'event',evId:ev.id,songId:null,ctx:null}); return; }
 },true);
 try{ render(); }catch(e){}
+
+/* ===================== Importar pacote de orações/textos (sem perder o que já existe) ===================== */
+/* arquivo: {app:'celebrar-textos', cat:'Orações Eucarísticas', texts:[{id,title,text,ord}]} */
+function txNrm(t){ return String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function importTextPack(d){
+  db.texts=db.texts||[]; const cats=prayCats();
+  let cat=cats.find(c=>txNrm(c)===txNrm(d.cat)); if(!cat){ cat=d.cat; setPrayCats([...cats,cat]); }
+  let novos=0, preench=0, atual=0, mantidos=0;
+  for(const x of d.texts||[]){ if(!x||!x.title) continue;
+    const same=db.texts.find(t=>t.id===x.id||t.packId===x.id);
+    if(same){ same.text=x.text; if(same.id===x.id) same.title=same.title||x.title; same.cat=cat; atual++; continue; }
+    const mine=db.texts.find(t=>txNrm(t.title)===txNrm(x.title)&&!t.pack);
+    if(mine&&String(mine.text||'').trim().length<300){ mine.text=x.text; mine.cat=cat; mine.pack=d.pack||true; mine.packId=x.id; mine.ord=x.ord; preench++; continue; }
+    if(mine){ mantidos++; db.texts.push({id:x.id,cat,title:x.title+' (Missal)',text:x.text,ord:x.ord,pack:d.pack||true}); novos++; continue; }
+    db.texts.push({id:x.id,cat,title:x.title,text:x.text,ord:x.ord,pack:d.pack||true}); novos++; }
+  save(); S.modal=null; go({view:'pray'});
+  toast(`Orações: ${novos} nova${novos===1?'':'s'}${preench?`, ${preench} completada${preench>1?'s':''}`:''}${atual?`, ${atual} atualizada${atual>1?'s':''}`:''}${mantidos?` · ${mantidos} sua${mantidos>1?'s':''} mantida${mantidos>1?'s':''}`:''}`);
+}
+(function(){ const _i=importData; importData=function(d){ if(d&&d.app==='celebrar-textos') return importTextPack(d); return _i(d); }; })();
+/* V. (sacerdote) com o mesmo destaque de P./S.; ordem natural (I, II, III…) dentro da categoria */
+(function(){ const _t=txHtml; txHtml=function(t){ return _t(String(t||'').replace(/^(\s*)V\.\s/gm,'$1P. ')).split('\n').map(l=>l.startsWith('» ')?`<span class="resp cont">${l.slice(2)}</span>`:l).join('\n'); }; })();
+function txOrd(t){ if(t.ord!=null) return t.ord; const m=String(t.title||'').match(/Eucar[ií]stica\s+([IVX]+)/i); const v={I:1,II:2,III:3,IV:4,V:5,VI:6,VII:7,VIII:8,IX:9,X:10}; return m?(v[m[1].toUpperCase()]||50):null; }
+(function(){ const _a=allTexts; allTexts=function(){ const r=_a(); const groups={}; r.forEach(x=>(groups[x.cat]=groups[x.cat]||[]).push(x));
+  for(const c in groups){ const g=groups[c]; if(g.some(x=>txOrd(x)!=null)){ g.forEach((x,i)=>x._i=i); g.sort((a,b)=>((txOrd(a)??1000)-(txOrd(b)??1000))||a._i-b._i); } }
+  return r.map(x=>x.cat).filter((c,i,a)=>a.indexOf(c)===i).flatMap(c=>groups[c]); }; })();
 
 </script>
 </body>
