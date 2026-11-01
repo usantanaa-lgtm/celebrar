@@ -785,6 +785,8 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .evimgbig{display:block;max-width:100%;max-height:60vh;margin:8px auto;border-radius:10px}
 .pane-list .head{flex-wrap:wrap} .pane-list .head .ttl{flex:1 1 200px} .pane-list .head .acts{flex:1 1 100%;justify-content:flex-start}
 #printArea .pimg{display:block;max-width:100%;max-height:70mm;margin:0 auto 10px;border-radius:6px}
+
+.salmo.bsal{padding:4px 14px 8px;font-size:13px} .salmo.bsal:empty{display:none}
 </style>
 </head>
 <body>
@@ -4222,7 +4224,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='52 · 01/11/2026';
+var APP_VERSION='53 · 01/11/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4901,6 +4903,12 @@ document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); 
   if(a==='evImgNew'){ stop(); evImgPick(S.modal.evId); return; }
   if(a==='evImgDel'){ stop(); const ev=evById(S.modal.evId); if(ev){ delete ev.img; save(); } S.modal=null; render(); toast('Imagem removida'); return; }
 },true);
+try{ render(); }catch(e){}
+/* refrão do salmo: dentro do bloco "Salmo" do repertório (se existir), em vez de no cabeçalho */
+function evSalmoBlk(ev){ return ev&&ev.date&&ev.blocks.find(b=>/salmo/i.test(b.name)); }
+(function(){ const _h=evHeader; evHeader=function(ev){ const h=_h(ev); if(!evSalmoBlk(ev)) return h; return h.replace(/<div class="salmo" data-salmo="[^"]*">[\s\S]*?<\/div>/,''); }; })();
+(function(){ const _l=evListHtml; evListHtml=function(ev){ let h=_l(ev); const b=evSalmoBlk(ev); if(!b||S.organize) return h;
+  const tag=`<div class="bh"><span>${esc(b.name)}</span></div>`; return h.replace(tag,tag+`<div class="salmo bsal" data-salmo="${ev.date}">${salmoHtml(ev.date)}</div>`); }; })();
 try{ render(); }catch(e){}
 
 </script>
