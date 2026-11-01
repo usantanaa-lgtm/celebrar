@@ -797,6 +797,13 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .calrow.aglit{color:var(--muted)} .calrow.aglit span{font-size:13px} .agplus{opacity:0;color:var(--accent);font-size:15px} .calrow.aglit:hover .agplus{opacity:1}
 .agcount{font-size:11px;color:var(--accent);font-weight:700;margin-left:6px;text-transform:none;letter-spacing:0}
 @media (hover:none){ .agplus{opacity:.5} }
+
+.esclist{max-height:260px;overflow:auto;margin:8px 0;border:1px solid var(--line);border-radius:10px}
+.escrow{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);font-size:14px}
+.escrow>b{font-family:var(--mono);font-size:13px} .escrow>small{color:var(--muted);width:28px}
+.escrow span{flex:1;display:flex;flex-direction:column} .escrow span small{color:var(--muted);font-size:12px}
+.escrow.dup{opacity:.5} .escrow em{font-size:12px;color:var(--muted)}
+#escTxt{width:100%;font-family:var(--mono);font-size:13px}
 </style>
 </head>
 <body>
@@ -4234,7 +4241,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='54 · 01/11/2026';
+var APP_VERSION='55 · 01/11/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4921,7 +4928,7 @@ function evSalmoBlk(ev){ return ev&&ev.date&&ev.blocks.find(b=>/salmo/i.test(b.n
   const tag=`<div class="bh"><span>${esc(b.name)}</span></div>`; return h.replace(tag,tag+`<div class="salmo bsal" data-salmo="${ev.date}">${salmoHtml(ev.date)}</div>`); }; })();
 try{ render(); }catch(e){}
 
-/* ===================== Agenda no formato do calendário litúrgico ===================== */
+/* ===================== Agenda por mês (formato do calendário) + colar escala ===================== */
 var MESES_AG=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function agRowEv(e){ const L=litInfo(e.date); const n=flatItems(e).length; const t=today();
   return `<button class="calrow agev ${e.date===t?'hoje':''} ${e.date<t?'past':''}" data-act="openEv" data-id="${e.id}"><i class="sw" style="background:${COR[L.cor]}"></i><b>${e.date.slice(8)}</b>
@@ -4929,26 +4936,51 @@ function agRowEv(e){ const L=litInfo(e.date); const n=flatItems(e).length; const
 function agRowLit(x){ return `<button class="calrow aglit ${x.iso===today()?'hoje':''}" data-act="agNew" data-d="${x.iso}" data-n="${esc(x.title)}" title="Criar evento neste dia"><i class="sw" style="background:${COR[x.L.cor]}"></i><b>${x.iso.slice(8)}</b><span>${esc(x.title)}</span>${x.prec?'<em title="Dia de preceito">★</em>':''}<small class="agplus">＋</small></button>`; }
 viewEvents=function(){
   if(!db.songs.length&&!db.events.length) return `<div class="welcome"><h2>Bem-vindo</h2><p>Para começar, importe o arquivo <b>celebrar-acervo-inicial.json</b> (suas músicas do Excel e do iReal). Em outro aparelho, importe o seu backup mais recente.</p><button class="pri" data-act="import">Importar arquivo</button><p class="hint">Ou comece do zero criando um evento.</p><button data-act="newEv">＋ Novo evento</button></div>`;
-  const Y=S.agY||+today().slice(0,4); const lit=db.prefs.agLit!==false;
+  const Y=S.agY||+today().slice(0,4);
   const evs=db.events.filter(e=>e.date&&+e.date.slice(0,4)===Y).sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
-  const cal=lit?yearCalendar(Y):[]; const evDates=new Set(evs.map(e=>e.date));
-  const byM={}; evs.forEach(e=>{ const m=+e.date.slice(5,7)-1; (byM[m]=byM[m]||[]).push({d:e.date,ev:e}); });
-  cal.forEach(x=>{ if(evDates.has(x.iso)) return; const m=+x.iso.slice(5,7)-1; (byM[m]=byM[m]||[]).push({d:x.iso,lit:x}); });
+  const byM={}; evs.forEach(e=>{ const m=+e.date.slice(5,7)-1; (byM[m]=byM[m]||[]).push(e); });
   const nodate=db.events.filter(e=>!e.date);
-  const months=MESES_AG.map((mn,i)=>{ const r=(byM[i]||[]).sort((a,b)=>a.d.localeCompare(b.d)); if(!r.length) return ''; const ne=r.filter(x=>x.ev).length;
-    return `<div class="calm" id="agm-${i}"><div class="sub">${mn}${ne?` <span class="agcount">${ne} evento${ne>1?'s':''}</span>`:''}</div>${r.map(x=>x.ev?agRowEv(x.ev):agRowLit(x.lit)).join('')}</div>`; }).join('');
-  return `<div class="bar"><h2>Agenda</h2><button class="pri" data-act="newEv">＋ Novo evento</button></div>${backupWarn()}
-    <div class="calhead"><button data-act="agYear" data-d="-1">‹</button><b class="serif">${Y}</b><button data-act="agYear" data-d="1">›</button>
-      <span class="hint">${lit?'Seus eventos em destaque; os domingos e festas sem evento aparecem claros — toque num deles para criar o repertório.':'Só os seus eventos.'}</span>
-      <button class="mini ${lit?'on':''}" data-act="agLit">${lit?'✓ ':''}Domingos e festas</button></div>
+  const months=MESES_AG.map((mn,i)=>{ const r=byM[i]; if(!r) return '';
+    return `<div class="calm" id="agm-${i}"><div class="sub">${mn} <span class="agcount">${r.length} evento${r.length>1?'s':''}</span></div>${r.map(agRowEv).join('')}</div>`; }).join('');
+  return `<div class="bar"><h2>Agenda</h2><button data-act="agEscala">📋 Colar escala</button><button class="pri" data-act="newEv">＋ Novo evento</button></div>${backupWarn()}
+    <div class="calhead"><button data-act="agYear" data-d="-1">‹</button><b class="serif">${Y}</b><button data-act="agYear" data-d="1">›</button></div>
     <div class="cal">${months||`<div class="empty">Nenhum evento em ${Y}.</div>`}</div>
     ${nodate.length?`<div class="sub">Sem data</div><div class="list">${nodate.map(evCard).join('')}</div>`:''}`;
 };
+/* ---- colar a escala do mês (ex.: tabela do WhatsApp/Word) e criar os eventos ---- */
+function escParse(txt){
+  const T=String(txt||'').replace(/\r/g,''); const out=[];
+  const MES={janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+  const hm=nrm(T).match(/(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(de\s+)?(\d{4})/); const hy=hm?+hm[3]:null;
+  const min=(T.match(/minist[ée]rio\s+[^\n\t–—-]+/i)||[''])[0].trim();
+  const t0=today(); const cy=+t0.slice(0,4), cm=+t0.slice(5,7);
+  for(const line of T.split('\n')){ const m=line.match(/(^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?=\s|$)/); if(!m) continue;
+    const d=+m[2], mo=+m[3]; let y=m[4]?(+m[4]<100?2000+ +m[4]:+m[4]):(hy||(mo<cm-2?cy+1:cy)); if(mo<1||mo>12||d<1||d>31) continue;
+    const rest=line.slice(m.index+m[0].length);
+    const tm=rest.match(/(\d{1,2})\s*(?:h|:)\s*(\d{2})?\s*(?:h|min)?/i); let time='',place='';
+    if(tm){ time=String(tm[1]).padStart(2,'0')+'h'+(tm[2]&&tm[2]!=='00'?tm[2]:''); place=rest.slice(tm.index+tm[0].length); }
+    place=place.replace(/^[\s\t|·,;:–—-]+|[\s\t|]+$/g,'').replace(/\s*\t\s*/g,' · ');
+    const iso=`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const L=litInfo(iso);
+    const name=L.titulo||L.festa||'Missa';
+    const dup=db.events.some(e=>e.date===iso&&(!time||!e.time||nrm(e.time).replace(/\D/g,'')===nrm(time).replace(/\D/g,'')));
+    out.push({iso,time,place,name,with:min,dup}); }
+  return out;
+}
+function escModal(){ const M=S.modal; const P=escParse(M.txt); const novos=P.filter(x=>!x.dup);
+  return `<div class="modal"><div class="box"><h3>Colar escala</h3><div class="hint">Cole a escala do mês (do WhatsApp, Word ou planilha). Cada linha com data (01/11), horário (07h) e local vira um evento na Agenda, já com o nome litúrgico do dia.</div>
+    <textarea id="escTxt" rows="7" placeholder="01/11  Domingo  07h  Igreja Matriz&#10;05/11  Quinta-feira  19h  Igreja Matriz">${esc(M.txt||'')}</textarea>
+    ${P.length?`<div class="esclist">${P.map(x=>`<div class="escrow ${x.dup?'dup':''}"><b>${fmtShort(x.iso)}</b><small>${wd(x.iso).slice(0,3)}</small><span>${esc(x.name)}<small>${esc([x.time,x.place].filter(Boolean).join(' · '))}</small></span>${x.dup?'<em>já existe</em>':''}</div>`).join('')}</div>`:''}
+    <div class="bar end"><button data-act="closeModal">Cancelar</button><button class="pri" data-act="escCreate" ${novos.length?'':'disabled'}>Criar ${novos.length||''} evento${novos.length===1?'':'s'}</button></div></div></div>`; }
+(function(){ const _m=modalHtml; modalHtml=function(){ if(S.modal&&S.modal.t==='escala') return escModal(); return _m(); }; })();
+document.addEventListener('input',e=>{ if(e.target.id==='escTxt'&&S.modal&&S.modal.t==='escala'){ S.modal.txt=e.target.value; clearTimeout(S._escT); S._escT=setTimeout(()=>{ const ta=document.getElementById('escTxt'); const pos=ta&&ta.selectionStart; render(); const t2=document.getElementById('escTxt'); if(t2){ t2.focus(); try{ t2.setSelectionRange(pos,pos); }catch(_){} } },400); } },true);
 /* ao abrir a agenda do ano atual, rola até o mês corrente */
 (function(){ const _r=render; render=function(){ const was=S._agShown; _r(); if(S.view==='events'&&!was){ S._agShown=true; const Y=S.agY||+today().slice(0,4); if(Y===+today().slice(0,4)){ const el=document.getElementById('agm-'+(+today().slice(5,7)-1)); if(el) setTimeout(()=>{ const r=el.getBoundingClientRect(); if(r.top>window.innerHeight*0.6) window.scrollTo({top:window.scrollY+r.top-90}); },30); } } if(S.view!=='events') S._agShown=false; }; })();
 document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act; const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
   if(a==='agYear'){ stop(); S.agY=(S.agY||+today().slice(0,4))+(+el.dataset.d); rerender(); return; }
-  if(a==='agLit'){ stop(); db.prefs.agLit=db.prefs.agLit===false; save0(); rerender(); return; }
+  if(a==='agEscala'){ stop(); S.modal={t:'escala',txt:''}; render(); setTimeout(()=>{ const t=document.getElementById('escTxt'); if(t) t.focus(); },50); return; }
+  if(a==='escCreate'){ stop(); const ta=document.getElementById('escTxt'); if(ta) S.modal.txt=ta.value; const P=escParse(S.modal.txt).filter(x=>!x.dup); const ty=evTypes()[0]||{name:'Missa',blocks:['Músicas']};
+    P.forEach(x=>db.events.push({id:uid(),name:x.name,type:ty.name,date:x.iso,time:x.time,place:x.place,with:x.with,notes:'',blocks:(ty.blocks||['Músicas']).map(n=>({id:uid(),name:n,items:[]}))}));
+    save(); S.modal=null; if(P[0]) S.agY=+P[0].iso.slice(0,4); S._agShown=false; render(); toast(`${P.length} evento${P.length===1?'':'s'} criado${P.length===1?'':'s'} na Agenda`); return; }
   if(a==='agNew'){ stop(); const ty=evTypes()[0]||{id:'livre'}; const last=[...db.events].filter(x=>x.date).sort((a,b)=>b.date.localeCompare(a.date))[0]||{}; S.modal={t:'newEv',d:{tpl:ty.id,date:el.dataset.d,name:el.dataset.n||'Missa',time:last.time||'',place:last.place||'',with:last.with||'',blocks:''}}; render(); return; }
 },true);
 try{ render(); }catch(e){}
