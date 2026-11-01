@@ -781,8 +781,7 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .rsel{width:100%;margin-top:6px;font-size:13px}
 
 .evimg{margin:8px 0 12px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--surface);display:flex;justify-content:center}
-.evimg img{display:block;width:100%;max-height:260px;object-fit:cover;cursor:zoom-in}
-.evimg.rot img,.evimg.lit img{max-height:320px}
+.evimg img{display:block;width:auto;max-width:100%;height:auto;max-height:65vh;object-fit:contain;cursor:zoom-in}
 .evimgbig{display:block;max-width:100%;max-height:60vh;margin:8px auto;border-radius:10px}
 .pane-list .head{flex-wrap:wrap} .pane-list .head .ttl{flex:1 1 200px} .pane-list .head .acts{flex:1 1 100%;justify-content:flex-start}
 #printArea .pimg{display:block;max-width:100%;max-height:70mm;margin:0 auto 10px;border-radius:6px}
@@ -1380,7 +1379,7 @@ function sidebar(){
   return `<aside class="side">
     <div class="sbrand"><span class="dot">✠</span><span class="tx">${esc(APP_NAME)}</span></div>
     <div class="slit" title="${esc(litLabel(L))}"><i class="sw" style="background:${COR[L.cor]}"></i><span class="tx">${esc(litLabel(L))}</span></div>
-    <nav>${it('events','☰','Eventos')}${it('lib','♪','Acervo')}${it('import','⬇','Importar','goImport')}${it('lit','✝','Liturgia')}${it('pray','☩','Orações')}
+    <nav>${it('events','☰','Agenda')}${it('lib','♪','Acervo')}${it('import','⬇','Importar','goImport')}${it('lit','✝','Liturgia')}${it('pray','☩','Orações')}
       <button class="si" data-act="find" title="Buscar"><span class="ic">🔍</span><span class="tx">Buscar</span></button></nav>
     ${up.length?`<div class="ssub tx">Próximos</div>${up.map(e=>`<button class="sev ${S.evId===e.id&&(S.view==='event'||S.view==='song')?'on':''}" data-act="openEv" data-id="${e.id}" title="${esc(e.name)}"><b>${fmtShort(e.date)}</b><span class="tx">${esc(e.name)}</span></button>`).join('')}`:''}
     <div class="sfoot"><button class="si" data-act="themeMenu" title="Tema"><span class="ic">🎨</span><span class="tx">Tema</span></button><button class="si" data-act="menu" title="Dados e backup"><span class="ic">⛁</span><span class="tx">Dados e backup</span></button>
@@ -1590,7 +1589,7 @@ function topbar(){
   const t=S.view==='events'||S.view==='event'?'events':S.view==='lit'?'lit':'lib';
   return `<header class="top"><div class="in">
     <button class="brand ghost" data-act="nav" data-v="events"><span class="dot">✠</span><span>${esc(APP_NAME)}</span></button>
-    <nav class="tabs">${[['events','Eventos'],['lib','Acervo'],['lit','Liturgia']].map(([v,l])=>`<button class="${t===v?'on':''}" data-act="nav" data-v="${v}">${l}</button>`).join('')}</nav>
+    <nav class="tabs">${[['events','Agenda'],['lib','Acervo'],['lit','Liturgia']].map(([v,l])=>`<button class="${t===v?'on':''}" data-act="nav" data-v="${v}">${l}</button>`).join('')}</nav>
     <button class="ghost ib" data-act="find" aria-label="Buscar música">🔍</button>
     <button class="ghost ib" data-act="menu" aria-label="Menu">⋯</button>
   </div></header>`;
@@ -1598,7 +1597,7 @@ function topbar(){
 function bottomNav(){
   const t=curTab()==='import'?'lib':curTab();
   const b=(v,ic,l)=>`<button class="${t===v?'on':''}" data-act="nav" data-v="${v}"><span class="ic">${ic}</span>${l}</button>`;
-  return `<nav class="bnav">${b('events','☰','Eventos')}${b('lib','♪','Acervo')}${b('lit','✝','Liturgia')}${b('pray','☩','Orações')}<button data-act="find"><span class="ic">🔍</span>Buscar</button></nav>`;
+  return `<nav class="bnav">${b('events','☰','Agenda')}${b('lib','♪','Acervo')}${b('lit','✝','Liturgia')}${b('pray','☩','Orações')}<button data-act="find"><span class="ic">🔍</span>Buscar</button></nav>`;
 }
 function backupWarn(){
   if(!db.songs.length) return '';
@@ -1626,7 +1625,7 @@ function viewEvents(){
       <button class="pri" data-act="import">Importar arquivo</button>
       <p class="hint">Ou comece do zero criando um evento.</p>
       <button data-act="newEv">＋ Novo evento</button></div>`;
-  return `<div class="bar"><h2>Eventos</h2><button class="pri" data-act="newEv">＋ Novo evento</button></div>
+  return `<div class="bar"><h2>Agenda</h2><button class="pri" data-act="newEv">＋ Novo evento</button></div>
     ${backupWarn()}
     <div class="sub">Próximos</div>
     <div class="list">${up.map(evCard).join('')||'<div class="empty">Nenhum evento marcado.</div>'}</div>
@@ -2487,7 +2486,7 @@ function sidebar(){
   const up=db.events.filter(e=>e.date&&e.date>=today()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,4);
   return `<aside class="side">
     <div class="shead"><span class="slogo">✠</span><span class="tx"><b>${esc(APP_NAME)}</b><small>Música e liturgia</small></span></div>
-    <nav>${it('home','⌂','Início')}${it('lib','♫','Acervo','nav',db.songs.length)}${it('events','▦','Eventos')}${it('import','⇩','Importar','goImport')}${it('lit','✝','Liturgia')}${it('pray','☩','Orações')}${it('fav','♡','Favoritas','goFav')}</nav>
+    <nav>${it('home','⌂','Início')}${it('lib','♫','Acervo','nav',db.songs.length)}${it('events','▦','Agenda')}${it('import','⇩','Importar','goImport')}${it('lit','✝','Liturgia')}${it('pray','☩','Orações')}${it('fav','♡','Favoritas','goFav')}</nav>
     ${up.length?`<div class="ssub tx">Próximos eventos</div>${up.map(e=>`<button class="sev ${S.evId===e.id&&(S.view==='event'||S.view==='song')?'on':''}" data-act="openEv" data-id="${e.id}" title="${esc(e.name)}"><b>${fmtShort(e.date)}</b><span class="tx">${esc(e.name)}</span></button>`).join('')}`:''}
     <button class="slit2" data-act="nav" data-v="lit" title="${esc(litLabel(L))}"><i class="sw" style="background:${COR[L.cor]}"></i><span class="tx"><small>Hoje na liturgia</small>${esc(litLabel(L))}</span></button>
     <div class="sfoot"><button class="si" data-act="themeMenu" title="Tema"><span class="ic">🎨</span><span class="tx">Tema</span></button><button class="si" data-act="menu" title="Dados e backup"><span class="ic">⛁</span><span class="tx">Dados e backup</span></button>
@@ -2507,7 +2506,7 @@ function topbar(){
 }
 function bottomNav(){
   const t=curTab(); const b=(v,ic,l)=>`<button class="${t===v?'on':''}" data-act="nav" data-v="${v}"><span class="ic">${ic}</span>${l}</button>`;
-  return `<nav class="bnav">${b('home','⌂','Início')}${b('events','▦','Eventos')}${b('lib','♫','Acervo')}${b('lit','✝','Liturgia')}${b('pray','☩','Orações')}</nav>`;
+  return `<nav class="bnav">${b('home','⌂','Início')}${b('events','▦','Agenda')}${b('lib','♫','Acervo')}${b('lit','✝','Liturgia')}${b('pray','☩','Orações')}</nav>`;
 }
 
 /* ----- Início ----- */
@@ -2583,7 +2582,7 @@ function lyricsOf(s){ return sections(s.cifra||'').map(sec=>{ const ly=sec.lines
 function fichaHtml(s){
   const U=usage()[s.id]||[]; const mk=mostKey(U);
   return `<div class="ficha">
-    <div class="fgrid">${[['Tom original',s.key||'–'],['Tom mais usado',mk||'–'],['Eventos',U.length],['Capo',s.capo||'–'],['Momentos',(s.momentos||[]).join(', ')||'–'],['Festa',s.festa||'–']].map(([a,b])=>`<div><small>${a}</small><b>${esc(String(b))}</b></div>`).join('')}</div>
+    <div class="fgrid">${[['Tom original',s.key||'–'],['Tom mais usado',mk||'–'],['Na agenda',U.length],['Capo',s.capo||'–'],['Momentos',(s.momentos||[]).join(', ')||'–'],['Festa',s.festa||'–']].map(([a,b])=>`<div><small>${a}</small><b>${esc(String(b))}</b></div>`).join('')}</div>
     ${s.trecho?`<div class="trecho">“${esc(s.trecho)}”</div>`:''}
     <div class="sub">Tocada em</div>
     ${U.length?`<div class="slist">${U.sort((a,b)=>(b.e.date||'').localeCompare(a.e.date||'')).map(x=>`<button class="srow" data-act="openEv" data-id="${x.e.id}"><span class="tx"><b>${esc(x.e.name)}</b><small>${x.e.date?fmtDate(x.e.date)+' · ':''}${esc(x.b.name)}</small></span><span class="k">${esc(x.key||'')}</span></button>`).join('')}</div>`:'<div class="hint">Ainda não entrou em nenhum evento.</div>'}
@@ -2696,7 +2695,7 @@ function sidebar(){
   const it=(v,ic,l,act='nav',badge='')=>`<button class="si ${t===v?'on':''}" data-act="${act}" data-v="${v}" title="${l}"><span class="ic">${ic}</span><span class="tx">${l}</span>${badge!==''&&!col?`<span class="sbadge">${badge}</span>`:''}</button>`;
   return `<aside class="side">
     <div class="shead"><span class="slogo">✠</span><span class="tx"><b>${esc(APP_NAME)}</b><small>Música que une</small></span></div>
-    <nav>${it('home','⌂','Início')}${it('lib','♫','Acervo','nav',db.songs.length)}${it('events','▦','Eventos')}${it('reps','☰','Repertórios')}${it('import','⇩','Importar','goImport')}${it('lit','✝','Liturgia')}${it('pray','☩','Orações')}${it('fav','♡','Favoritos','goFav')}
+    <nav>${it('home','⌂','Início')}${it('lib','♫','Acervo','nav',db.songs.length)}${it('events','▦','Agenda')}${it('reps','☰','Repertórios')}${it('import','⇩','Importar','goImport')}${it('lit','✝','Liturgia')}${it('pray','☩','Orações')}${it('fav','♡','Favoritos','goFav')}
       <button class="si" data-act="find" title="Buscar"><span class="ic">⌕</span><span class="tx">Buscar</span></button></nav>
     <div class="ssub tx">Hoje na liturgia</div>
     <div class="slitc tx">
@@ -2816,7 +2815,7 @@ function songPanel(){
         ${ev&&wide()?`<button class="ghost ib ${S.focus?'on':''}" data-act="focus" title="${S.focus?'Mostrar lista':'Esconder lista'}">${S.focus?'⤡':'⤢'}</button>`:''}
         <button class="ghost ib" data-act="editSong" title="Editar">⋮</button></div>
     </div>
-    <div class="istrip">${[['Tom original',s.key||'–'],['Tom mais usado',mostKey(U)||'–'],['Momento',(s.momentos||[])[0]||'–'],['Eventos',U.length],['Capo',s.capo||'–']].map(([a,b])=>`<div><small>${a}</small><b>${esc(String(b))}</b></div>`).join('')}</div>
+    <div class="istrip">${[['Tom original',s.key||'–'],['Tom mais usado',mostKey(U)||'–'],['Momento',(s.momentos||[])[0]||'–'],['Na agenda',U.length],['Capo',s.capo||'–']].map(([a,b])=>`<div><small>${a}</small><b>${esc(String(b))}</b></div>`).join('')}</div>
     <div class="stabs">${tabs.map(([m,l])=>`<button class="${mode===m?'on':''}" data-act="songMode" data-m="${m}">${l}</button>`).join('')}</div>
     ${musical?`<div class="tools2">
       <label class="tsel">${VK.shift?'Tom (soa)':'Tom'}: <select class="ksel" data-bind="songKey" aria-label="Tom">${keyOptions(key0,s.key)}</select></label>
@@ -2859,7 +2858,7 @@ function viewArrLib(){
 }
 function helpHtml(){
   return `<div class="modal"><div class="box"><h3>Ajuda rápida</h3><div class="help">
-    <p><b>Montar um repertório:</b> Eventos → ＋ Novo evento. Em cada bloco, digite o nome ou um trecho da música, ou cole o link do Cifra Club. Escolha o tom na própria lista.</p>
+    <p><b>Montar um repertório:</b> Agenda → ＋ Novo evento. Em cada bloco, digite o nome ou um trecho da música, ou cole o link do Cifra Club. Escolha o tom na própria lista.</p>
     <p><b>Trazer cifras:</b> no Cifra Club use <i>Baixar cifra</i> (.txt) e, aqui, Importar → Escolher arquivos. No notebook, pode copiar e colar.</p>
     <p><b>Meu arranjo:</b> toque num compasso da grade (ou num acorde da cifra) para inversão, rearmonização, linha de baixo e convenções. O original nunca muda.</p>
     <p><b>Cores na música:</b> preto = original · dourado = seu arranjo · azul pontilhado = sugestão do Celebrar.</p>
@@ -3096,7 +3095,7 @@ function sidebar(){
   const it=(v,ic,l,act='nav',badge='')=>`<button class="si ${t===v?'on':''}" data-act="${act}" data-v="${v}" title="${l}"><span class="ic">${ic}</span><span class="tx">${l}</span>${badge!==''&&!col?`<span class="sbadge">${badge}</span>`:''}</button>`;
   const nArr=db.songs.filter(hasArr).length;
   return `<aside class="side">
-    <nav>${it('home','⌂','Início')}${it('lib','♫','Acervo','nav',db.songs.length)}${it('events','▦','Eventos')}${it('reps','☰','Repertórios')}${it('import','⇩','Importar','goImport')}${it('fav','♡','Favoritos','goFav')}</nav>
+    <nav>${it('home','⌂','Início')}${it('lib','♫','Acervo','nav',db.songs.length)}${it('events','▦','Agenda')}${it('reps','☰','Repertórios')}${it('import','⇩','Importar','goImport')}${it('fav','♡','Favoritos','goFav')}</nav>
     <div class="ssub tx">Liturgia</div>
     ${it('lit','✝','Liturgia do dia')}${it('cal','▤','Calendário litúrgico')}${it('pray','☩','Orações')}
     <div class="ssub tx">Música</div>
@@ -4223,7 +4222,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='50 · 01/11/2026';
+var APP_VERSION='52 · 01/11/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
