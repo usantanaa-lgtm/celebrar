@@ -787,6 +787,16 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 #printArea .pimg{display:block;max-width:100%;max-height:70mm;margin:0 auto 10px;border-radius:6px}
 
 .salmo.bsal{padding:4px 14px 8px;font-size:13px} .salmo.bsal:empty{display:none}
+
+.calrow.agev{background:var(--surface);border:1px solid var(--line);border-radius:10px;margin:4px 0;padding:8px 8px;min-height:48px}
+.calrow.agev b{color:var(--text);font-weight:700}
+.calrow.agev.past{opacity:.75}
+.calrow.agev.hoje{background:var(--accent-soft);border-color:var(--accent)}
+.agtx{flex:1;display:flex;flex-direction:column;min-width:0} .agn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .agtx small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agc{color:var(--muted);font-size:12px;white-space:nowrap} .agimg{font-style:normal;font-size:14px}
+.calrow.aglit{color:var(--muted)} .calrow.aglit span{font-size:13px} .agplus{opacity:0;color:var(--accent);font-size:15px} .calrow.aglit:hover .agplus{opacity:1}
+.agcount{font-size:11px;color:var(--accent);font-weight:700;margin-left:6px;text-transform:none;letter-spacing:0}
+@media (hover:none){ .agplus{opacity:.5} }
 </style>
 </head>
 <body>
@@ -4224,7 +4234,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='53 · 01/11/2026';
+var APP_VERSION='54 · 01/11/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4909,6 +4919,38 @@ function evSalmoBlk(ev){ return ev&&ev.date&&ev.blocks.find(b=>/salmo/i.test(b.n
 (function(){ const _h=evHeader; evHeader=function(ev){ const h=_h(ev); if(!evSalmoBlk(ev)) return h; return h.replace(/<div class="salmo" data-salmo="[^"]*">[\s\S]*?<\/div>/,''); }; })();
 (function(){ const _l=evListHtml; evListHtml=function(ev){ let h=_l(ev); const b=evSalmoBlk(ev); if(!b||S.organize) return h;
   const tag=`<div class="bh"><span>${esc(b.name)}</span></div>`; return h.replace(tag,tag+`<div class="salmo bsal" data-salmo="${ev.date}">${salmoHtml(ev.date)}</div>`); }; })();
+try{ render(); }catch(e){}
+
+/* ===================== Agenda no formato do calendário litúrgico ===================== */
+var MESES_AG=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function agRowEv(e){ const L=litInfo(e.date); const n=flatItems(e).length; const t=today();
+  return `<button class="calrow agev ${e.date===t?'hoje':''} ${e.date<t?'past':''}" data-act="openEv" data-id="${e.id}"><i class="sw" style="background:${COR[L.cor]}"></i><b>${e.date.slice(8)}</b>
+    <span class="agtx"><span class="agn">${esc(e.name||'Sem nome')}</span><small>${esc([wd(e.date).slice(0,3),e.time,e.place].filter(Boolean).join(' · '))}</small></span>${e.img?'<em class="agimg">🖼</em>':''}<small class="agc">${n} ♪</small></button>`; }
+function agRowLit(x){ return `<button class="calrow aglit ${x.iso===today()?'hoje':''}" data-act="agNew" data-d="${x.iso}" data-n="${esc(x.title)}" title="Criar evento neste dia"><i class="sw" style="background:${COR[x.L.cor]}"></i><b>${x.iso.slice(8)}</b><span>${esc(x.title)}</span>${x.prec?'<em title="Dia de preceito">★</em>':''}<small class="agplus">＋</small></button>`; }
+viewEvents=function(){
+  if(!db.songs.length&&!db.events.length) return `<div class="welcome"><h2>Bem-vindo</h2><p>Para começar, importe o arquivo <b>celebrar-acervo-inicial.json</b> (suas músicas do Excel e do iReal). Em outro aparelho, importe o seu backup mais recente.</p><button class="pri" data-act="import">Importar arquivo</button><p class="hint">Ou comece do zero criando um evento.</p><button data-act="newEv">＋ Novo evento</button></div>`;
+  const Y=S.agY||+today().slice(0,4); const lit=db.prefs.agLit!==false;
+  const evs=db.events.filter(e=>e.date&&+e.date.slice(0,4)===Y).sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
+  const cal=lit?yearCalendar(Y):[]; const evDates=new Set(evs.map(e=>e.date));
+  const byM={}; evs.forEach(e=>{ const m=+e.date.slice(5,7)-1; (byM[m]=byM[m]||[]).push({d:e.date,ev:e}); });
+  cal.forEach(x=>{ if(evDates.has(x.iso)) return; const m=+x.iso.slice(5,7)-1; (byM[m]=byM[m]||[]).push({d:x.iso,lit:x}); });
+  const nodate=db.events.filter(e=>!e.date);
+  const months=MESES_AG.map((mn,i)=>{ const r=(byM[i]||[]).sort((a,b)=>a.d.localeCompare(b.d)); if(!r.length) return ''; const ne=r.filter(x=>x.ev).length;
+    return `<div class="calm" id="agm-${i}"><div class="sub">${mn}${ne?` <span class="agcount">${ne} evento${ne>1?'s':''}</span>`:''}</div>${r.map(x=>x.ev?agRowEv(x.ev):agRowLit(x.lit)).join('')}</div>`; }).join('');
+  return `<div class="bar"><h2>Agenda</h2><button class="pri" data-act="newEv">＋ Novo evento</button></div>${backupWarn()}
+    <div class="calhead"><button data-act="agYear" data-d="-1">‹</button><b class="serif">${Y}</b><button data-act="agYear" data-d="1">›</button>
+      <span class="hint">${lit?'Seus eventos em destaque; os domingos e festas sem evento aparecem claros — toque num deles para criar o repertório.':'Só os seus eventos.'}</span>
+      <button class="mini ${lit?'on':''}" data-act="agLit">${lit?'✓ ':''}Domingos e festas</button></div>
+    <div class="cal">${months||`<div class="empty">Nenhum evento em ${Y}.</div>`}</div>
+    ${nodate.length?`<div class="sub">Sem data</div><div class="list">${nodate.map(evCard).join('')}</div>`:''}`;
+};
+/* ao abrir a agenda do ano atual, rola até o mês corrente */
+(function(){ const _r=render; render=function(){ const was=S._agShown; _r(); if(S.view==='events'&&!was){ S._agShown=true; const Y=S.agY||+today().slice(0,4); if(Y===+today().slice(0,4)){ const el=document.getElementById('agm-'+(+today().slice(5,7)-1)); if(el) setTimeout(()=>{ const r=el.getBoundingClientRect(); if(r.top>window.innerHeight*0.6) window.scrollTo({top:window.scrollY+r.top-90}); },30); } } if(S.view!=='events') S._agShown=false; }; })();
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act; const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
+  if(a==='agYear'){ stop(); S.agY=(S.agY||+today().slice(0,4))+(+el.dataset.d); rerender(); return; }
+  if(a==='agLit'){ stop(); db.prefs.agLit=db.prefs.agLit===false; save0(); rerender(); return; }
+  if(a==='agNew'){ stop(); const ty=evTypes()[0]||{id:'livre'}; const last=[...db.events].filter(x=>x.date).sort((a,b)=>b.date.localeCompare(a.date))[0]||{}; S.modal={t:'newEv',d:{tpl:ty.id,date:el.dataset.d,name:el.dataset.n||'Missa',time:last.time||'',place:last.place||'',with:last.with||'',blocks:''}}; render(); return; }
+},true);
 try{ render(); }catch(e){}
 
 </script>
