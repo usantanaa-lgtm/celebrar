@@ -804,6 +804,9 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .escrow span{flex:1;display:flex;flex-direction:column} .escrow span small{color:var(--muted);font-size:12px}
 .escrow.dup{opacity:.5} .escrow em{font-size:12px;color:var(--muted)}
 #escTxt{width:100%;font-family:var(--mono);font-size:13px}
+
+.fxtag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 8px;margin-right:4px}
+.ffl .srow{gap:10px} .ffl .srow.on{background:var(--accent-soft)} .ffl .sgchk{display:inline-flex;align-items:center;justify-content:center} .ffk{font-family:var(--mono);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -4241,7 +4244,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='55 · 01/11/2026';
+var APP_VERSION='56 · 09/11/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4982,6 +4985,70 @@ document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); 
     P.forEach(x=>db.events.push({id:uid(),name:x.name,type:ty.name,date:x.iso,time:x.time,place:x.place,with:x.with,notes:'',blocks:(ty.blocks||['Músicas']).map(n=>({id:uid(),name:n,items:[]}))}));
     save(); S.modal=null; if(P[0]) S.agY=+P[0].iso.slice(0,4); S._agShown=false; render(); toast(`${P.length} evento${P.length===1?'':'s'} criado${P.length===1?'':'s'} na Agenda`); return; }
   if(a==='agNew'){ stop(); const ty=evTypes()[0]||{id:'livre'}; const last=[...db.events].filter(x=>x.date).sort((a,b)=>b.date.localeCompare(a.date))[0]||{}; S.modal={t:'newEv',d:{tpl:ty.id,date:el.dataset.d,name:el.dataset.n||'Missa',time:last.time||'',place:last.place||'',with:last.with||'',blocks:''}}; render(); return; }
+},true);
+try{ render(); }catch(e){}
+
+/* ===================== Repertórios fixos (sem data): de um artista, de um padre, de um ministério… ===================== */
+/* Um repertório fixo é um evento sem data. A Agenda mostra só os eventos com data; os fixos ficam em Repertórios. */
+function isFixo(e){ return e&&!e.date; }
+function fixos(){ return db.events.filter(isFixo).sort((a,b)=>nrm(a.name).localeCompare(nrm(b.name))); }
+viewReps=function(){
+  const F=fixos(); const D=db.events.filter(e=>e.date).sort((a,b)=>b.date.localeCompare(a.date));
+  const card=e=>{ const n=flatItems(e).length; const ss=flatItems(e).slice(0,4).map(x=>(songById(x.it.songId)||{}).title).filter(Boolean);
+    return `<button class="card repc" data-act="openEv" data-id="${e.id}"><span class="tx"><b>${esc(e.name)}</b><small>${e.date?fmtDate(e.date)+' · ':''}${e.with&&e.date?esc(e.with)+' · ':''}${n} música${n===1?'':'s'}</small><small class="rsongs">${esc(ss.join(' · '))}${n>4?'…':''}</small></span></button>`; };
+  return `<div class="bar"><h2>Repertórios</h2><button data-act="newEv">＋ Evento com data</button><button class="pri" data-act="newFixo">＋ Repertório fixo</button></div>
+    <div class="sub">Fixos <span class="agcount">sem data</span></div>
+    <div class="hint" style="margin:0 0 8px">Músicas de um artista, de um padre ou do ministério, com os tons de cada um. Use para montar os eventos da Agenda.</div>
+    <div class="list">${F.map(card).join('')||'<div class="empty">Nenhum ainda. Ex.: “Patrícia Ribeiro”, “Padre Jaciel”.</div>'}</div>
+    ${D.length?`<div class="sub">Dos eventos</div><div class="list">${D.map(card).join('')}</div>`:''}`;
+};
+/* Agenda: só eventos com data (os fixos ficam em Repertórios) */
+(function(){ const _v=viewEvents; viewEvents=function(){ const h=_v(); return h.replace(/<div class="sub">Sem data<\/div><div class="list">[\s\S]*?<\/div>\s*$/,'')+(fixos().length?`<div class="hint" style="margin-top:14px">Repertórios fixos (sem data) ficam em <a href="#" data-act="nav" data-v="reps">Repertórios</a>.</div>`:''); }; })();
+/* novo repertório fixo */
+function newFixoModal(){ const d=S.modal.d; const ts=evTypes();
+  return `<div class="modal"><div class="box"><h3>Novo repertório fixo</h3><div class="form">
+    <label>Nome<input data-nf="name" value="${esc(d.name||'')}" placeholder="Ex.: Patrícia Ribeiro, Padre Jaciel"></label>
+    <label>De quem / para quê <input data-nf="with" value="${esc(d.with||'')}" placeholder="Ex.: cantora, padre, ministério (opcional)"></label>
+    <label>Organizar em<select data-nf="tpl"><option value="lista" ${d.tpl==='lista'?'selected':''}>Uma lista só de músicas</option>${ts.map(t=>`<option value="${esc(t.id)}" ${d.tpl===t.id?'selected':''}>Momentos da ${esc(t.name)}</option>`).join('')}</select></label>
+    </div><div class="hint">Sem data — não aparece na Agenda. Cada música guarda o tom deste repertório.</div>
+    <div class="bar end"><button data-act="closeModal">Cancelar</button><button class="pri" data-act="createFixo">Criar</button></div></div></div>`; }
+/* dentro de um evento com data: puxar músicas de um repertório fixo */
+function fromFixoModal(){ const M=S.modal; const ev=evById(M.evId); const F=fixos().filter(f=>f.id!==M.evId);
+  if(!M.src) return `<div class="modal"><div class="box"><h3>Puxar de um repertório fixo</h3><div class="slist">${F.map(f=>`<button class="srow" data-act="ffPick" data-id="${f.id}"><span class="tx"><b>${esc(f.name)}</b><small>${flatItems(f).length} músicas${f.with?' · '+esc(f.with):''}</small></span><span>›</span></button>`).join('')||'<div class="empty">Você ainda não tem repertórios fixos. Crie em Repertórios → ＋ Repertório fixo.</div>'}</div>
+    <div class="bar end"><button data-act="closeModal">Cancelar</button></div></div></div>`;
+  const src=evById(M.src); const it=flatItems(src); M.sel=M.sel||{};
+  const have=new Set(flatItems(ev).map(x=>x.it.songId)); const n=Object.keys(M.sel).length;
+  return `<div class="modal"><div class="box"><h3>${esc(src.name)}</h3><div class="hint">Escolha as músicas. Elas entram no bloco do momento certo, com o tom deste repertório.</div>
+    <div class="slist ffl">${it.map((x,i)=>{ const s=songById(x.it.songId); if(!s) return ''; const on=!!M.sel[i]; const k=x.it.key||s.key||'';
+      return `<button class="srow ${on?'on':''}" data-act="ffTog" data-i="${i}"><span class="sgchk ${on?'on':''}">${on?'✓':'＋'}</span><span class="tx"><b>${esc(s.title)}</b><small>${esc(x.b?x.b.name:'')}${(s.momentos||[]).length?' · '+esc(s.momentos.join(', ')):''}${have.has(s.id)?' · já está no evento':''}</small></span>${k?`<b class="ffk">${esc(k)}</b>`:''}</button>`; }).join('')}</div>
+    <div class="bar end"><button data-act="ffBack">‹ Outro</button><span class="sp"></span><button data-act="closeModal">Cancelar</button><button class="pri" data-act="ffAdd" ${n?'':'disabled'}>Pôr ${n||''} no evento</button></div></div></div>`; }
+function ffTarget(ev,srcBlockName,s){ const N=nrm;
+  let b=ev.blocks.find(x=>N(x.name)===N(srcBlockName||''));
+  if(!b){ for(const m of (s.momentos||[])){ b=ev.blocks.find(x=>N(x.name)===N(m)||N(x.name).includes(N(m))||N(m).includes(N(x.name))&&N(x.name).length>3); if(b) break; } }
+  if(!b){ b=ev.blocks.find(x=>N(x.name)==='musicas'); if(!b){ b={id:uid(),name:'Músicas',items:[]}; ev.blocks.push(b); } }
+  return b; }
+(function(){ const _m=modalHtml; modalHtml=function(){ if(S.modal&&S.modal.t==='newFixo') return newFixoModal(); if(S.modal&&S.modal.t==='fromFixo') return fromFixoModal(); return _m(); }; })();
+/* cabeçalho: repertório fixo não tem roteiro/sugestões/imagem do dia; evento com data ganha "Puxar de repertório fixo" */
+(function(){ const _h=evHeader; evHeader=function(ev){ let h=_h(ev);
+  if(isFixo(ev)){ h=h.replace('<div class="meta">','<div class="meta"><span class="fxtag">Repertório fixo</span> ').replace('data-act="nav" data-v="events"','data-act="nav" data-v="reps"'); }
+  else if(fixos().length) h=h.replace('<button data-act="shareEv">Compartilhar</button>',`<button data-act="fromFixo" data-id="${ev.id}">⤵ De um fixo</button><button data-act="shareEv">Compartilhar</button>`);
+  return h; }; })();
+(function(){ const _ve=viewEvent; viewEvent=function(){ let h=_ve(); const ev=evById(S.evId); if(isFixo(ev)) h=h.replace(/<button[^>]*data-act="rotOpen"[^>]*>[\s\S]*?<\/button>/,'').replace(/<button[^>]*data-act="sugOpen"[^>]*>[\s\S]*?<\/button>/,'').replace(/<button[^>]*data-act="evImg"[^>]*>[\s\S]*?<\/button>/,''); return h; }; })();
+document.addEventListener('input',e=>{ const k=e.target.dataset.nf; if(k&&S.modal&&S.modal.t==='newFixo') S.modal.d[k]=e.target.value; },true);
+document.addEventListener('change',e=>{ const k=e.target.dataset.nf; if(k&&S.modal&&S.modal.t==='newFixo') S.modal.d[k]=e.target.value; },true);
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act; const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
+  if(a==='newFixo'){ stop(); S.modal={t:'newFixo',d:{name:'',with:'',tpl:'lista'}}; render(); setTimeout(()=>{ const i=document.querySelector('[data-nf="name"]'); if(i) i.focus(); },50); return; }
+  if(a==='createFixo'){ stop(); const d=S.modal.d; const name=(d.name||'').trim(); if(!name){ toast('Dê um nome ao repertório'); return; } const ty=evTypes().find(t=>t.id===d.tpl);
+    const ev={id:uid(),name,type:'Repertório fixo',date:'',time:'',place:'',with:(d.with||'').trim(),notes:'',fixo:true,blocks:(ty?ty.blocks:['Músicas']).map(n=>({id:uid(),name:n,items:[]}))};
+    db.events.push(ev); save(); S.modal=null; S.organize=false; go({view:'event',evId:ev.id,songId:null,ctx:null}); return; }
+  if(a==='fromFixo'){ stop(); S.modal={t:'fromFixo',evId:el.dataset.id}; render(); return; }
+  if(a==='ffPick'){ stop(); S.modal.src=el.dataset.id; S.modal.sel={}; render(); return; }
+  if(a==='ffBack'){ stop(); delete S.modal.src; render(); return; }
+  if(a==='ffTog'){ stop(); const i=el.dataset.i; if(S.modal.sel[i]) delete S.modal.sel[i]; else S.modal.sel[i]=1; render(); return; }
+  if(a==='ffAdd'){ stop(); const M=S.modal; const ev=evById(M.evId), src=evById(M.src); const it=flatItems(src); let n=0;
+    for(const i of Object.keys(M.sel).map(Number).sort((x,y)=>x-y)){ const x=it[i]; const s=x&&songById(x.it.songId); if(!s) continue; const b=ffTarget(ev,x.b&&x.b.name,s);
+      if(b.items.some(y=>y.songId===s.id)) continue; b.items.push({id:uid(),songId:s.id,key:x.it.key||s.key||'',note:x.it.note||''}); n++; }
+    save(); S.modal=null; render(); toast(`${n} música${n===1?'':'s'} de ${src.name}`); return; }
 },true);
 try{ render(); }catch(e){}
 
