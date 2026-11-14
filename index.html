@@ -813,6 +813,10 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .pick.sres small{color:var(--muted);font-size:12px} .pick.sres .snip{font-size:13px;color:var(--text);opacity:.85;line-height:1.35}
 .pick.sres .snip{display:block} .pick.sres mark{display:inline!important;width:auto!important;background:var(--gold);color:#000;border-radius:3px;padding:0 2px}
 #fres2{max-height:58vh;overflow:auto;margin-top:8px;display:flex;flex-direction:column;gap:6px} #fq2{width:100%}
+
+.head.evhead{flex-wrap:wrap;align-items:flex-start;row-gap:10px}
+.head.evhead>.ttl{flex:1 1 calc(100% - 56px);min-width:0}
+.head.evhead>.acts{flex:1 1 100%;justify-content:flex-start;flex-wrap:wrap;margin-left:0}
 </style>
 </head>
 <body>
@@ -4250,7 +4254,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='57 · 14/11/2026';
+var APP_VERSION='58 · 14/11/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -5035,7 +5039,7 @@ function ffTarget(ev,srcBlockName,s){ const N=nrm;
   return b; }
 (function(){ const _m=modalHtml; modalHtml=function(){ if(S.modal&&S.modal.t==='newFixo') return newFixoModal(); if(S.modal&&S.modal.t==='fromFixo') return fromFixoModal(); return _m(); }; })();
 /* cabeçalho: repertório fixo não tem roteiro/sugestões/imagem do dia; evento com data ganha "Puxar de repertório fixo" */
-(function(){ const _h=evHeader; evHeader=function(ev){ let h=_h(ev);
+(function(){ const _h=evHeader; evHeader=function(ev){ let h=_h(ev).replace('<div class="head">','<div class="head evhead">');
   if(isFixo(ev)){ h=h.replace('<div class="meta">','<div class="meta"><span class="fxtag">Repertório fixo</span> ').replace('data-act="nav" data-v="events"','data-act="nav" data-v="reps"'); }
   else if(fixos().length) h=h.replace('<button data-act="shareEv">Compartilhar</button>',`<button data-act="fromFixo" data-id="${ev.id}">⤵ De um fixo</button><button data-act="shareEv">Compartilhar</button>`);
   return h; }; })();
