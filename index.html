@@ -807,6 +807,12 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 
 .fxtag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 8px;margin-right:4px}
 .ffl .srow{gap:10px} .ffl .srow.on{background:var(--accent-soft)} .ffl .sgchk{display:inline-flex;align-items:center;justify-content:center} .ffk{font-family:var(--mono);color:var(--accent)}
+
+.schips{margin:0 0 8px;flex-wrap:wrap} .schips .chip{font-size:12px;padding:4px 10px}
+.pick.sres{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;width:100%}
+.pick.sres small{color:var(--muted);font-size:12px} .pick.sres .snip{font-size:13px;color:var(--text);opacity:.85;line-height:1.35}
+.pick.sres .snip{display:block} .pick.sres mark{display:inline!important;width:auto!important;background:var(--gold);color:#000;border-radius:3px;padding:0 2px}
+#fres2{max-height:58vh;overflow:auto;margin-top:8px;display:flex;flex-direction:column;gap:6px} #fq2{width:100%}
 </style>
 </head>
 <body>
@@ -4244,7 +4250,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='56 · 09/11/2026';
+var APP_VERSION='57 · 14/11/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -5049,6 +5055,74 @@ document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); 
     for(const i of Object.keys(M.sel).map(Number).sort((x,y)=>x-y)){ const x=it[i]; const s=x&&songById(x.it.songId); if(!s) continue; const b=ffTarget(ev,x.b&&x.b.name,s);
       if(b.items.some(y=>y.songId===s.id)) continue; b.items.push({id:uid(),songId:s.id,key:x.it.key||s.key||'',note:x.it.note||''}); n++; }
     save(); S.modal=null; render(); toast(`${n} música${n===1?'':'s'} de ${src.name}`); return; }
+},true);
+try{ render(); }catch(e){}
+
+/* ===================== Busca conforme a aba + ordenar repertório fixo ===================== */
+/* ---- escopo da busca pela tela atual ---- */
+var SCOPES=[['musicas','Músicas'],['oracoes','Orações'],['agenda','Agenda'],['reps','Repertórios'],['cal','Calendário'],['biblio','Biblioteca']];
+function scopeOfView(v){ if((v==='event'||v==='song')&&S.evId&&typeof isFixo==='function'&&isFixo(evById(S.evId))) return 'reps'; return ({pray:'oracoes',text:'oracoes',lit:'oracoes',events:'agenda',event:'agenda',roteiro:'agenda',reps:'reps',cal:'cal',biblio:'biblio',doc:'biblio'})[v]||'musicas'; }
+function scopePh(sc){ return ({musicas:'Buscar música, artista ou trecho da letra…',oracoes:'Buscar oração, prefácio ou trecho…',agenda:'Buscar na agenda (nome, local, data)…',reps:'Buscar repertório ou música dentro dele…',cal:'Buscar no calendário (festa, santo, domingo)…',biblio:'Buscar na biblioteca…'})[sc]; }
+function bNorm(t){ return nrm(String(t||'')); }
+function bSnip(text,q){ const T=String(text||'').replace(/\[[^\]]*\]/g,' ').replace(/^\s*[PRTVS]\.\s/gm,'').replace(/^» /gm,'').replace(/\s+/g,' '); const i=bNorm(T).indexOf(q); if(i<0) return ''; const a=Math.max(0,i-40); return (a?'…':'')+esc(T.slice(a,i))+'<mark>'+esc(T.slice(i,i+q.length))+'</mark>'+esc(T.slice(i+q.length,i+q.length+60))+'…'; }
+function bTerms(q){ return bNorm(q).split(/\s+/).filter(Boolean); }
+function bHit(hay,terms){ const h=bNorm(hay); return terms.every(t=>h.includes(t)); }
+function scopeRes(sc,q){
+  const terms=bTerms(q); if(!terms.length) return `<div class="hint">Digite uma palavra.</div>`; const q0=terms[0];
+  const empty='<div class="empty">Nada encontrado.</div>';
+  if(sc==='oracoes'){ const T=allTexts(); const ph=bNorm(q).trim();
+    const sc_=t=>{ const ti=bNorm(t.title+' '+t.cat), tx=bNorm(t.text); if(ti.includes(ph)) return 4; if(terms.every(x=>ti.includes(x))) return 3; if(tx.includes(ph)) return 2; if(terms.every(x=>tx.includes(x)||ti.includes(x))) return 1; return 0; };
+    const R=T.map(t=>({t,s:sc_(t)})).filter(x=>x.s).sort((a,b)=>b.s-a.s);
+    const row=(t,sn)=>`<button class="pick sres" data-act="txOpen" data-id="${t.id}"><b>${esc(t.title)}</b><small>${esc(t.cat)}</small>${sn?`<span class="snip">${sn}</span>`:''}</button>`;
+    return R.slice(0,60).map(x=>row(x.t,x.s>=3?'':bSnip(x.t.text,x.s===2?ph:q0))).join('')||empty; }
+  if(sc==='agenda'){ const E=db.events.filter(e=>e.date&&bHit([e.name,e.place,e.with,e.time,fmtDate(e.date),wd(e.date)].join(' '),terms)).sort((a,b)=>b.date.localeCompare(a.date));
+    return E.slice(0,60).map(e=>`<button class="pick sres" data-act="openEv" data-id="${e.id}"><b>${esc(e.name)}</b><small>${fmtDate(e.date)} · ${esc([e.time,e.place].filter(Boolean).join(' · '))}</small></button>`).join('')||empty; }
+  if(sc==='reps'){ const E=db.events.map(e=>{ const songs=flatItems(e).map(x=>(songById(x.it.songId)||{}).title||''); const inName=bHit([e.name,e.with].join(' '),terms); const hitS=songs.filter(s=>bHit(s,terms)); return {e,inName,hitS}; }).filter(x=>x.inName||x.hitS.length);
+    return E.slice(0,60).map(({e,hitS})=>`<button class="pick sres" data-act="openEv" data-id="${e.id}"><b>${esc(e.name)}</b><small>${e.date?fmtDate(e.date):'Repertório fixo'}${hitS.length?' · tem: '+esc(hitS.slice(0,3).join(', ')):''}</small></button>`).join('')||empty; }
+  if(sc==='cal'){ const y=+today().slice(0,4); const C=[y,y+1].flatMap(Y=>yearCalendar(Y)).filter(x=>bHit(x.title,terms));
+    let sund=[]; if(/domingo|advento|quaresma|pascoa|comum/.test(bNorm(q))){ const d0=new Date(today()+'T12:00:00Z'); for(let i=0;i<400;i++){ const d=new Date(d0.getTime()+i*864e5); if(d.getUTCDay()!==0) continue; const iso=d.toISOString().slice(0,10); const L=litInfo(iso); const t=L.titulo||litLabel(L); if(bHit(t,terms)) sund.push({iso,title:t}); } }
+    const all=C.map(x=>({iso:x.iso,title:x.title})).concat(sund).filter((x,i,a)=>a.findIndex(z=>z.iso===x.iso)===i).sort((a,b)=>a.iso.localeCompare(b.iso));
+    return all.slice(0,60).map(x=>`<button class="pick sres" data-act="sfLit" data-d="${x.iso}"><b>${esc(x.title)}</b><small>${wd(x.iso)}, ${fmtDate(x.iso)}</small></button>`).join('')||empty; }
+  if(sc==='biblio'){ const L=(db.library||[]).filter(x=>bHit(x.name+' '+x.cat,terms));
+    return L.slice(0,60).map(x=>`<button class="pick sres" data-act="docOpen" data-id="${x.id}"><b>${esc(x.name)}</b><small>${esc(x.cat)}</small></button>`).join('')+(L.length?'<div class="hint">Para procurar dentro de um PDF, abra-o e use 🔍 Buscar.</div>':empty); }
+  return null;
+}
+(function(){ const _m=modalHtml; modalHtml=function(){ const M=S.modal; if(!M||M.t!=='find') return _m();
+  const sc=M.sc||scopeOfView(S.view); if(sc==='musicas'){ const h=_m(); return h.replace(/<div class="box">/,`<div class="box">${scopeChips(sc)}`).replace('Buscar música</h3>','Buscar</h3>'); }
+  return `<div class="modal"><div class="box">${scopeChips(sc)}<h3>Buscar</h3><input id="fq2" type="search" value="${esc(M.q||'')}" placeholder="${esc(scopePh(sc))}" autocomplete="off"><div id="fres2">${scopeRes(sc,M.q||'')}</div><div class="bar end"><button data-act="closeModal">Fechar</button></div></div></div>`; }; })();
+function scopeChips(sc){ return `<div class="chips schips">${SCOPES.map(([k,l])=>`<button class="chip ${k===sc?'on':''}" data-act="scSet" data-v="${k}">${l}</button>`).join('')}</div>`; }
+/* a barra de busca do topo mostra o que vai procurar */
+(function(){ const _t=topbar; topbar=function(){ return _t().replace(/(<button class="gsearch" data-act="find"><span>⌕<\/span><span class="ph">)[^<]*(<\/span>)/,'$1'+scopePh(scopeOfView(S.view))+'$2'); }; })();
+document.addEventListener('input',e=>{ if(e.target.id==='fq2'&&S.modal&&S.modal.t==='find'){ S.modal.q=e.target.value; const r=document.getElementById('fres2'); if(r) r.innerHTML=scopeRes(S.modal.sc||scopeOfView(S.view),e.target.value)||''; } },true);
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act; const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
+  if(a==='scSet'){ stop(); const q=(document.getElementById('fq2')||document.getElementById('fq')||{}).value||S.modal.q||''; S.modal.sc=el.dataset.v; S.modal.q=q; render(); setTimeout(()=>{ const i=document.getElementById('fq2')||document.getElementById('fq'); if(i){ i.focus(); if(el.dataset.v==='musicas'){ i.dispatchEvent(new Event('input',{bubbles:true})); } } },30); return; }
+  if(a==='sfLit'){ stop(); S.modal=null; S.litDate=el.dataset.d; go({view:'lit'}); return; }
+},true);
+
+window.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('[data-act]'); if(el&&S.modal&&S.modal.t==='find'&&['txOpen','openEv','docOpen'].includes(el.dataset.act)) S.modal=null; },true);
+/* ---- ordenar um repertório (fixo ou não) ---- */
+function ordMenu(ev){ const one=ev.blocks.length<=1;
+  return `<div class="modal"><div class="box"><h3>Ordenar “${esc(ev.name)}”</h3><div class="slist">
+    <button class="srow" data-act="ordDo" data-k="az"><span class="tx"><b>Ordem alfabética</b><small>A–Z ${one?'na lista':'dentro de cada bloco'}</small></span></button>
+    <button class="srow" data-act="ordDo" data-k="cat"><span class="tx"><b>Por categoria</b><small>Separa em blocos pelo momento/categoria de cada música (Entrada, Comunhão, Adoração…), em ordem alfabética</small></span></button>
+    ${one?'':`<button class="srow" data-act="ordDo" data-k="flat"><span class="tx"><b>Juntar numa lista só</b><small>Tira os blocos e deixa tudo numa lista, A–Z</small></span></button>`}
+    <button class="srow" data-act="ordDo" data-k="manual"><span class="tx"><b>Do meu jeito</b><small>Abre a edição: use ▲ ▼ para mover músicas e blocos</small></span></button>
+    </div><div class="bar end"><button data-act="closeModal">Cancelar</button></div></div></div>`; }
+function ordApply(ev,k){ const byT=(a,b)=>bNorm((songById(a.songId)||{}).title).localeCompare(bNorm((songById(b.songId)||{}).title));
+  if(k==='az'){ ev.blocks.forEach(b=>b.items.sort(byT)); }
+  if(k==='flat'){ const all=ev.blocks.flatMap(b=>b.items); all.sort(byT); ev.blocks=[{id:uid(),name:'Músicas',items:all}]; }
+  if(k==='cat'){ const all=ev.blocks.flatMap(b=>b.items); const order=MOM_MISSA.map(bNorm); const groups={};
+    for(const it of all){ const s=songById(it.songId)||{}; const m=(s.momentos||[]).find(x=>x&&x.trim())||'Sem categoria'; (groups[m]=groups[m]||[]).push(it); }
+    const names=Object.keys(groups).sort((a,b)=>{ const ia=order.indexOf(bNorm(a)), ib=order.indexOf(bNorm(b)); if(a==='Sem categoria') return 1; if(b==='Sem categoria') return -1; if(ia>=0||ib>=0) return (ia<0?99:ia)-(ib<0?99:ib); return bNorm(a).localeCompare(bNorm(b)); });
+    ev.blocks=names.map(n=>{ const old=ev.blocks.find(b=>bNorm(b.name)===bNorm(n)); return {id:old?old.id:uid(),name:n,items:groups[n].sort(byT)}; }); }
+  save(); }
+(function(){ const _m=modalHtml; modalHtml=function(){ if(S.modal&&S.modal.t==='ord') return ordMenu(evById(S.modal.evId)); return _m(); }; })();
+(function(){ const _ve=viewEvent; viewEvent=function(){ let h=_ve(); const ev=evById(S.evId); if(!ev||!isFixo(ev)||S.organize) return h;
+  return h.replace(/(<button[^>]*data-act="organize"[^>]*>)/,`<button data-act="ordOpen">⇅ Ordenar</button>$1`); }; })();
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act; const stop=()=>{ e.stopImmediatePropagation(); e.preventDefault(); };
+  if(a==='ordOpen'){ stop(); S.modal={t:'ord',evId:S.evId}; render(); return; }
+  if(a==='ordDo'){ stop(); const ev=evById(S.modal.evId); const k=el.dataset.k; S.modal=null; if(k==='manual'){ S.organize=true; render(); toast('Use ▲ ▼ para mover; toque em Concluir quando terminar'); return; }
+    ordApply(ev,k); render(); toast(k==='az'?'Em ordem alfabética':k==='cat'?'Separado por categoria':'Tudo numa lista só'); return; }
 },true);
 try{ render(); }catch(e){}
 
