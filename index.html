@@ -4257,7 +4257,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='61 · 15/11/2026';
+var APP_VERSION='62 · 15/11/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -5163,6 +5163,12 @@ document.addEventListener('change',e=>{ if(e.target.dataset.act2==='impToBi'&&S.
   _s();
   if(ev&&title&&bi!==''&&bi!=null&&ev.blocks[+bi]&&!(I&&I.forSong)){ const s=findSongByTitle(title); if(s&&!ev.blocks[+bi].items.some(x=>x.songId===s.id)){ addSongToBlock(ev,+bi,s); toast(`“${s.title}” salva e posta em ${ev.blocks[+bi].name}`); render(); } } }; })();
 document.addEventListener('click',e=>{ const el=e.target.closest('[data-act="impBack"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault(); const F=S.impFrom; S.impFrom=null; if(F&&evById(F.evId)) go(F.songId?{view:'song',evId:F.evId,songId:F.songId}:{view:'event',evId:F.evId}); else go({view:'lib'}); },true);
+/* lista do repertório (painel da esquerda no tablet/notebook) não volta para o topo ao abrir uma música */
+(function(){ const _r=render; render=function(){ const pl=document.querySelector('.pane-list'), ps=document.querySelector('.pane-song');
+  const st={ev:S.evId,song:S.songId,view:S.view,l:pl?pl.scrollTop:0,s:ps?ps.scrollTop:0};
+  _r.apply(this,arguments);
+  if(S.evId&&S.evId===st.ev){ const pl2=document.querySelector('.pane-list'); if(pl2&&st.l) pl2.scrollTop=st.l; const ps2=document.querySelector('.pane-song'); if(ps2&&st.s&&S.songId===st.song) ps2.scrollTop=st.s; }
+}; })();
 
 </script>
 </body>
