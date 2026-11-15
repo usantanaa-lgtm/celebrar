@@ -817,6 +817,9 @@ body.scol .appband2 .abtn{padding:0 18px;justify-content:flex-start} body.scol .
 .head.evhead{flex-wrap:wrap;align-items:flex-start;row-gap:10px}
 .head.evhead>.ttl{flex:1 1 calc(100% - 56px);min-width:0}
 .head.evhead>.acts{flex:1 1 100%;justify-content:flex-start;flex-wrap:wrap;margin-left:0}
+
+.impfrom{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;background:var(--surface)}
+.impfrom label{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap} .impfrom select{min-width:200px}
 </style>
 </head>
 <body>
@@ -2271,7 +2274,7 @@ load();
 const shared=handleShare();
 if(!shared){ try{ history.replaceState({v:'events'},''); }catch(e){} }
 lastWide=wide(); render();
-if('serviceWorker' in navigator&&location.protocol.startsWith('http')){ const had=!!navigator.serviceWorker.controller; navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{ try{ r.update(); }catch(e){} }).catch(()=>{}); let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(had&&!rl){ rl=true; location.reload(); } }); }
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){ const had=!!navigator.serviceWorker.controller; navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{ try{ r.update(); }catch(e){} }).catch(()=>{}); let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(had&&!rl){ rl=true; const busy=()=>{ const a=document.activeElement; return (a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))||S.modal||(S.view==='import'&&S.imp&&(S.imp.txt||S.imp.list)); }; const go=()=>{ if(busy()) setTimeout(go,4000); else location.reload(); }; go(); } }); }
 
 function rotPreview(){
   const p=S.imp&&S.imp.rp; if(!p) return '';
@@ -3949,9 +3952,9 @@ function viewKey(key,s){
 }
 function modeNote(MD,VK,key,s){
   if(MD.id==='sopro'){ const sp=soproInfo(); return `<div class="mnote">🎷 <b>${esc(sp[1])}</b>: ${sp[2]?`a música soa em <b>${esc(key||'?')}</b>, e a cifra abaixo já está no tom do seu instrumento: <b>${esc(VK.key||'?')}</b>.`:'sem transposição.'} <button class="mini" data-act="modeOpen">trocar</button></div>`; }
-  if(MD.id==='violao'){ const cp=capoFor(key); const n=capoNow(key,s); const opts=[0,1,2,3,4,5,6,7,8,9].map(c=>`<option value="${c}" ${c===n?'selected':''}>${c?c+'ª casa — desenhos de '+trKey(key,-c):'Sem capo — '+key}${cp&&cp.c===c?' ★':''}</option>`).join('');
+  if(MD.id==='violao'){ const cp=capoFor(key); const n=capoNow(key,s); const opts=[0,1,2,3,4,5,6,7,8,9].map(c=>`<option value="${c}" ${c===n?'selected':''}>${c?c+'ª casa — tocar no tom de '+trKey(key,-c):'Sem capo — tom de '+key}${cp&&cp.c===c?' ★':''}</option>`).join('');
     return `<div class="mnote capobar">🎸 <label>Capotraste: <select data-act2="capoSel" data-id="${s.id}">${opts}</select></label>
-      <span>${n?`Toque os desenhos de <b>${esc(trKey(key,-n))}</b> com capo na ${n}ª — soa em ${esc(key)}.`:(cp?`Sugestão: capo na <b>${cp.c}ª</b> (desenhos de ${esc(cp.shape)}), marcada com ★.`:'')}</span>
+      <span>${n?`Com capo na ${n}ª, toque no <b>tom de ${esc(trKey(key,-n))}</b> — os acordes abaixo já estão nesse tom e soam em ${esc(key)}.`:(cp?`Sugestão: capo na <b>${cp.c}ª</b> (tocar no tom de ${esc(cp.shape)}), marcada com ★.`:'')}</span>
       <small>Cifra escrita em ${esc(s.cifraKey||s.key||'?')}${s.cifra?' · <a href="#" data-act="editSong">corrigir</a>':''}</small></div>`; }
   if(MD.id==='voz') return '';
   return '';
@@ -4254,7 +4257,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{ if(e.target.id==='rotPasteTx'&&S.modal) S.modal.raw=e.target.value; },true);
 
 /* ===================== Versão visível + atualização forçada ===================== */
-var APP_VERSION='58 · 14/11/2026';
+var APP_VERSION='61 · 15/11/2026';
 (function(){ const _m=modalHtml; modalHtml=function(){ let h=_m(); if(S.modal&&S.modal.t==='menu') h=h.replace('<label class="lbl">Aparência</label>',`<label class="lbl">Versão do app</label><div class="bar"><span class="hint" style="margin:0">Você está na versão <b>${APP_VERSION}</b>.</span><button data-act="forceUpdate">↻ Buscar versão nova</button></div><label class="lbl">Aparência</label>`); return h; }; })();
 document.addEventListener('click',async e=>{ const el=e.target.closest('[data-act="forceUpdate"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault();
   toast('Atualizando…'); try{ if('serviceWorker' in navigator){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(x){}
@@ -4324,7 +4327,7 @@ async function gdSync(interactive){
   try{ await gdAuth(interactive!==false); markChanges(); res=await gdUpload(); db.prefs.gdLinked=true; save0();
     const n=res.added+res.updated+res.removed; if(n||interactive!==false) toast(n?`Sincronizado: ${res.added?res.added+' novo(s) ':''}${res.updated?res.updated+' atualizado(s) ':''}${res.removed?res.removed+' removido(s)':''}`.trim():'Tudo sincronizado com o Drive');
   }catch(e){ toast(e.message||'Não consegui sincronizar'); }
-  SYNC.busy=false; render(); return res;
+  SYNC.busy=false; const ch=res&&(res.added+res.updated+res.removed); if(ch||interactive!==false) render(); else syncBar(); return res;
 }
 async function gdRun(kind){ /* connect, up, down → sempre sincroniza nos dois sentidos */
   if(GD.busy) return; GD.busy=true;
@@ -5129,6 +5132,37 @@ document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); 
     ordApply(ev,k); render(); toast(k==='az'?'Em ordem alfabética':k==='cat'?'Separado por categoria':'Tudo numa lista só'); return; }
 },true);
 try{ render(); }catch(e){}
+
+/* ===================== Não perder o que está sendo digitado quando a tela se redesenha ===================== */
+/* (sincronização em segundo plano, volta de outra aba etc.) */
+function fieldKey(el){ if(!el||!el.tagName) return null; if(el.id) return '#'+CSS.escape(el.id);
+  for(const a of el.attributes){ if(a.name.startsWith('data-')&&a.name!=='data-act') return `${el.tagName.toLowerCase()}[${a.name}="${CSS.escape(a.value)}"]`; }
+  if(el.name) return `${el.tagName.toLowerCase()}[name="${CSS.escape(el.name)}"]`; return null; }
+(function(){ const _r=render; render=function(){
+  const a=document.activeElement; const typing=a&&/INPUT|TEXTAREA/.test(a.tagName)&&a.type!=='file'&&a.type!=='checkbox';
+  let k=null,ss=0,se=0,st=0,val=null; if(typing){ k=fieldKey(a); try{ ss=a.selectionStart; se=a.selectionEnd; }catch(_){} st=a.scrollTop; val=a.value; }
+  const wy=window.scrollY;
+  _r.apply(this,arguments);
+  if(typing&&k){ const b=document.querySelector(k); if(b&&b!==a){ if(b.value!==val&&b.tagName===a.tagName&&b.value==='' ) b.value=val; try{ b.focus({preventScroll:true}); b.setSelectionRange(ss,se); }catch(_){ try{ b.focus(); }catch(__){} } b.scrollTop=st; if(Math.abs(window.scrollY-wy)>2) window.scrollTo(0,wy); } }
+}; })();
+/* Importar cifra: o que você digita em Nome/Artista/Tom/Link não é apagado quando a cifra é relida */
+document.addEventListener('input',e=>{ const t=e.target; if(t.dataset&&t.dataset.ip&&S.imp){ (S.imp.ov=S.imp.ov||{})[t.dataset.ip]=t.value; } },true);
+document.addEventListener('change',e=>{ const t=e.target; if(t.dataset&&t.dataset.ip&&S.imp){ (S.imp.ov=S.imp.ov||{})[t.dataset.ip]=t.value; } },true);
+(function(){ const _p=impPreview; impPreview=function(){ const I=S.imp; if(I&&I.parsed&&I.ov) Object.assign(I.parsed,I.ov); return _p(); }; })();
+window.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('[data-act="impClear"],[data-act="impSave"],[data-act="impTab"]'); if(el&&S.imp){ if(S.imp.parsed&&S.imp.ov) Object.assign(S.imp.parsed,S.imp.ov); S.imp.ov={}; } },true);
+/* Importar a partir de um repertório: botão para voltar e opção de já pôr a música no repertório */
+document.addEventListener('focusin',e=>{ const t=e.target; if(t.classList&&t.classList.contains('adder')) S.lastBi=+t.dataset.bi; },true);
+(function(){ const _g=go; go=function(p,push){ if(p&&p.view==='import'&&S.view!=='import'){ const ev=S.evId&&evById(S.evId); S.impFrom=(ev&&['event','song','roteiro'].includes(S.view))?{evId:ev.id,songId:S.view==='song'?S.songId:null}:null; if(S.impFrom&&S.imp&&S.imp.toBi==null) S.imp.toBi=(S.lastBi!=null?S.lastBi:''); } return _g(p,push); }; })();
+(function(){ const _v=viewImport; viewImport=function(){ let h=_v(); const F=S.impFrom; const ev=F&&evById(F.evId); if(!ev) return h;
+  if(S.imp&&S.imp.toBi==null) S.imp.toBi=(S.lastBi!=null?S.lastBi:'');
+  h=h.replace('<button class="ghost back" data-act="nav" data-v="lib">‹</button>','<button class="ghost back" data-act="impBack" title="Voltar">‹</button>');
+  const sel=`<div class="impfrom"><button data-act="impBack">‹ Voltar para <b>${esc(ev.name)}</b></button>${S.imp&&S.imp.tab==='cifra'?`<label>Ao salvar, pôr também em <select data-act2="impToBi"><option value="">— só no acervo —</option>${ev.blocks.map((b,i)=>`<option value="${i}" ${String(S.imp.toBi)===String(i)?'selected':''}>${esc(ev.name)} › ${esc(b.name)}</option>`).join('')}</select></label>`:''}</div>`;
+  return h.replace('<div class="seg wide">',sel+'<div class="seg wide">'); }; })();
+document.addEventListener('change',e=>{ if(e.target.dataset.act2==='impToBi'&&S.imp){ S.imp.toBi=e.target.value; } },true);
+(function(){ const _s=impSave; impSave=function(){ const I=S.imp; const title=I&&I.parsed&&I.parsed.title; const F=S.impFrom; const ev=F&&evById(F.evId); const bi=I&&I.toBi;
+  _s();
+  if(ev&&title&&bi!==''&&bi!=null&&ev.blocks[+bi]&&!(I&&I.forSong)){ const s=findSongByTitle(title); if(s&&!ev.blocks[+bi].items.some(x=>x.songId===s.id)){ addSongToBlock(ev,+bi,s); toast(`“${s.title}” salva e posta em ${ev.blocks[+bi].name}`); render(); } } }; })();
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act="impBack"]'); if(!el) return; e.stopImmediatePropagation(); e.preventDefault(); const F=S.impFrom; S.impFrom=null; if(F&&evById(F.evId)) go(F.songId?{view:'song',evId:F.evId,songId:F.songId}:{view:'event',evId:F.evId}); else go({view:'lib'}); },true);
 
 </script>
 </body>
